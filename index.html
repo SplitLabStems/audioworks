@@ -1510,17 +1510,7 @@
     ariaAudio = new Audio('aria.mp3');
     ariaAudio.loop   = true;
     ariaAudio.volume = 0;
-    ariaAudio.play()
-      .then(() => {
-        let v = 0;
-        const fadeIn = setInterval(() => {
-          if (!ariaAudio) { clearInterval(fadeIn); return; }
-          v = Math.min(v + 0.001, 0.09);
-          ariaAudio.volume = v;
-          if (v >= 0.09) clearInterval(fadeIn);
-        }, 200);
-      })
-      .catch(e => console.warn('Aria play():', e));
+    ariaAudio.play().catch(e => console.warn('Aria play():', e));
   }
 
   function stopAria() {
@@ -1528,11 +1518,26 @@
     const a = ariaAudio;
     let v = a.volume;
     const fadeOut = setInterval(() => {
-      v = Math.max(v - 0.003, 0);
+      v = Math.max(v - 0.005, 0);
       a.volume = v;
-      if (v <= 0) { a.pause(); clearInterval(fadeOut); }
-    }, 100);
+      if (v <= 0) { a.pause(); a.src = ''; clearInterval(fadeOut); }
+    }, 50);
     ariaAudio = null;
+  }
+
+  function fadeAriaIn() {
+    if (!ariaAudio) return;
+    const target = 0.09;
+    if (ariaAudio.volume < target) {
+      ariaAudio.volume = Math.min(ariaAudio.volume + 0.004, target);
+    }
+  }
+
+  function fadeAriaOut() {
+    if (!ariaAudio) return;
+    if (ariaAudio.volume > 0) {
+      ariaAudio.volume = Math.max(ariaAudio.volume - 0.006, 0);
+    }
   }
 
   // ── SPEECH DETECTION ──
@@ -1565,10 +1570,14 @@
       clearTimeout(silenceTimer); silenceTimer = null;
       speechLevel += (vuSmooth - speechLevel) * 0.18;
       setTheatreLevel(speechLevel);
-    } else if (!silenceTimer) {
-      silenceTimer = setTimeout(() => {
-        fadeOutTheatre(); speechLevel = 0; silenceTimer = null;
-      }, 400);
+      fadeAriaIn();
+    } else {
+      fadeAriaOut();
+      if (!silenceTimer) {
+        silenceTimer = setTimeout(() => {
+          fadeOutTheatre(); speechLevel = 0; silenceTimer = null;
+        }, 400);
+      }
     }
 
     drawBG(vuSmooth);
