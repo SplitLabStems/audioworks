@@ -1450,53 +1450,40 @@
 
 
   // ── ARIA mp3 ──
+  let ariaInterval = null;
+  let isSpeaking = false;
+
   function startAria() {
     if (ariaAudio) return;
     ariaAudio = new Audio('aria.mp3');
-    ariaAudio.loop   = true;
+    ariaAudio.loop = true;
     ariaAudio.volume = 0;
     ariaAudio.play().catch(e => console.warn('Aria play():', e));
+
+    // Separate interval to smoothly control volume
+    ariaInterval = setInterval(() => {
+      if (!ariaAudio) return;
+      if (isSpeaking) {
+        if (ariaAudio.volume < 0.09)
+          ariaAudio.volume = Math.min(ariaAudio.volume + 0.005, 0.09);
+      } else {
+        if (ariaAudio.volume > 0)
+          ariaAudio.volume = Math.max(ariaAudio.volume - 0.003, 0);
+      }
+    }, 80);
   }
 
   function stopAria() {
+    clearInterval(ariaInterval); ariaInterval = null;
+    isSpeaking = false;
     if (!ariaAudio) return;
     const a = ariaAudio;
     ariaAudio = null;
-    let v = a.volume;
-    const fadeOut = setInterval(() => {
-      v = Math.max(v - 0.005, 0);
-      a.volume = v;
-      if (v <= 0) { a.pause(); a.src = ''; clearInterval(fadeOut); }
-    }, 50);
-  }
-
-  function fadeAriaIn() {
-    if (!ariaAudio) return;
-    if (ariaAudio.volume < 0.09) {
-      ariaAudio.volume = Math.min(ariaAudio.volume + 0.008, 0.09);
-    }
-  }
-
-  function fadeAriaOut() {
-    if (!ariaAudio) return;
-    if (ariaAudio.volume > 0) {
-      ariaAudio.volume = Math.max(ariaAudio.volume - 0.003, 0);
-    }
+    a.pause(); a.src = '';
   }
 
   // ── SPEECH DETECTION ──
   const SPEECH_THRESHOLD = 0.012;
-
-  function setTheatreLevel(level) {
-    if (!theatreMaster || !audioCtx) return;
-    theatreMaster.gain.setTargetAtTime(level * 0.5, audioCtx.currentTime, 0.3);
-  }
-
-  function fadeOutTheatre() {
-    if (!theatreMaster || !audioCtx) return;
-    theatreMaster.gain.setTargetAtTime(0, audioCtx.currentTime, 0.4);
-    if (crackleGain) crackleGain.gain.setTargetAtTime(0, audioCtx.currentTime, 3.5);
-  }
 
   // ── ANIMATE ──
   function animate() {
@@ -1511,16 +1498,15 @@
     vuSmooth += (target - vuSmooth) * 0.22;
 
     if (rms > SPEECH_THRESHOLD) {
+      isSpeaking = true;
       clearTimeout(silenceTimer); silenceTimer = null;
-      speechLevel += (vuSmooth - speechLevel) * 0.18;
-      setTheatreLevel(speechLevel);
-      fadeAriaIn();
     } else {
-      fadeAriaOut();
       if (!silenceTimer) {
         silenceTimer = setTimeout(() => {
-          fadeOutTheatre(); speechLevel = 0; silenceTimer = null;
-        }, 400);
+          isSpeaking = false;
+          speechLevel = 0;
+          silenceTimer = null;
+        }, 500);
       }
     }
 
