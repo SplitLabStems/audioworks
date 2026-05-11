@@ -1455,56 +1455,48 @@
     drawBG(0);
   }
 
+  // Theatre fade progress (0=normal, 1=full theatre)
+  let theatreFade = 0;
+  let theatreTarget = 0;
+
   function drawBG(level) {
     const W = bgCanvas.width, H = bgCanvas.height;
     bgCtx.clearRect(0, 0, W, H);
     if (!bgImg.complete || bgImg.naturalWidth === 0) return;
 
-    if (!isPlaying) {
-      // Normal mode: very subtle
-      bgCtx.save();
-      bgCtx.globalAlpha = 0.07;
-      bgCtx.filter = 'grayscale(100%) contrast(160%) brightness(0.5)';
-      bgCtx.drawImage(bgImg, 0, 0, W, H);
-      bgCtx.restore();
-      return;
-    }
+    // Smoothly move theatreFade toward theatreTarget (very slow = ~8s fade)
+    theatreFade += (theatreTarget - theatreFade) * 0.008;
 
-    // Theatre mode: draw full image desaturated and very dark
+    // ── LAYER 1: contour base (always visible, subtle in normal mode) ──
+    const baseAlpha = 0.07 + theatreFade * 0.88;
+    const baseBrightness = (0.5 - theatreFade * 0.44).toFixed(2);
     bgCtx.save();
-    bgCtx.globalAlpha = 0.9;
-    bgCtx.filter = 'grayscale(100%) brightness(0.08)';
+    bgCtx.globalAlpha = baseAlpha;
+    bgCtx.filter = `grayscale(100%) contrast(180%) brightness(${baseBrightness})`;
     bgCtx.drawImage(bgImg, 0, 0, W, H);
     bgCtx.restore();
 
-    // Spotlight on console: radial gradient mask revealing the lit image underneath
-    // First draw the bright console layer
+    if (theatreFade < 0.05) return;
+
+    // ── LAYER 2: console spotlight (contour glow) ──
+    const spotBr = (0.4 + vuSmooth * 0.8).toFixed(2);
     bgCtx.save();
-    const brightness = Math.min(0.35 + vuSmooth * 0.25, 0.6).toFixed(2);
-    bgCtx.filter = `grayscale(30%) brightness(${brightness}) contrast(110%)`;
-    bgCtx.globalAlpha = 1;
+    bgCtx.globalAlpha = theatreFade * Math.min(0.6 + vuSmooth * 0.3, 0.9);
+    bgCtx.filter = `grayscale(100%) brightness(${spotBr}) contrast(220%)`;
     bgCtx.drawImage(bgImg, 0, 0, W, H);
     bgCtx.restore();
 
-    // Now mask it: keep only the console area (bottom center), black out the rest
-    // Use destination-in with a radial gradient
+    // ── LAYER 3: radial mask — console area only ──
     bgCtx.save();
     bgCtx.globalCompositeOperation = 'destination-in';
-    // Gradient centered on the console (bottom 60% of image, center-left)
     const gx = W * 0.42, gy = H * 0.72;
-    const grad = bgCtx.createRadialGradient(gx, gy, W * 0.05, gx, gy, W * 0.52);
-    grad.addColorStop(0,   'rgba(0,0,0,1)');
-    grad.addColorStop(0.45,'rgba(0,0,0,0.85)');
-    grad.addColorStop(0.75,'rgba(0,0,0,0.2)');
-    grad.addColorStop(1,   'rgba(0,0,0,0)');
+    const grad = bgCtx.createRadialGradient(gx, gy, W * 0.04, gx, gy, W * 0.50);
+    grad.addColorStop(0,    `rgba(0,0,0,${theatreFade})`);
+    grad.addColorStop(0.4,  `rgba(0,0,0,${(theatreFade * 0.8).toFixed(2)})`);
+    grad.addColorStop(0.75, `rgba(0,0,0,${(theatreFade * 0.15).toFixed(2)})`);
+    grad.addColorStop(1,    'rgba(0,0,0,0)');
     bgCtx.fillStyle = grad;
     bgCtx.fillRect(0, 0, W, H);
-    bgCtx.restore();
-
-    // Re-draw the dark layer on top for the hall area (blends blackout back)
-    bgCtx.save();
-    bgCtx.globalCompositeOperation = 'source-over';
-    bgCtx.globalAlpha = 0.0;
     bgCtx.restore();
   }
 
@@ -1551,7 +1543,8 @@
         micBtn.classList.add('active');
         micIcon.textContent = '■';
         micLabel.textContent = 'STOP';
-        // Enter theatre mode
+        // Enter theatre mode — slow fade handled in drawBG
+        theatreTarget = 1;
         document.body.classList.add('theatre-mode');
         animate();
       }).catch(e => console.error('Play failed:', e));
@@ -1569,6 +1562,7 @@
       micIcon.textContent = '▶';
       micLabel.textContent = 'PLAY';
       // Exit theatre mode
+      theatreTarget = 0; theatreFade = 0;
       document.body.classList.remove('theatre-mode');
       vuSmooth = 0; drawBG(0);
     }
