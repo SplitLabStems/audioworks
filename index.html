@@ -1459,16 +1459,27 @@
   let theatreFade = 0;
   let theatreTarget = 0;
 
-  // Offscreen canvases so destination-in doesn't bleed between layers
+  // Offscreen canvases
   let offConsole = null, offStage = null;
+  let consoleReady = false;
 
-  function ensureOffscreen(W, H) {
-    if (!offConsole || offConsole.width !== W) {
-      offConsole = document.createElement('canvas');
-      offStage   = document.createElement('canvas');
-    }
-    offConsole.width = offStage.width = W;
-    offConsole.height = offStage.height = H;
+  function buildConsoleLayer(W, H) {
+    offConsole = document.createElement('canvas');
+    offConsole.width = W; offConsole.height = H;
+    const ctxC = offConsole.getContext('2d');
+    ctxC.filter = 'grayscale(100%) brightness(0.45) contrast(220%)';
+    ctxC.drawImage(bgImg, 0, 0, W, H);
+    ctxC.filter = 'none';
+    // Mask: bottom/console area only
+    ctxC.globalCompositeOperation = 'destination-in';
+    const cx = W * 0.42, cy = H * 0.75;
+    const cg = ctxC.createRadialGradient(cx, cy, W * 0.02, cx, cy, W * 0.42);
+    cg.addColorStop(0,   'rgba(0,0,0,1)');
+    cg.addColorStop(0.5, 'rgba(0,0,0,0.7)');
+    cg.addColorStop(1,   'rgba(0,0,0,0)');
+    ctxC.fillStyle = cg;
+    ctxC.fillRect(0, 0, W, H);
+    consoleReady = true;
   }
 
   function drawBG(level) {
@@ -1478,7 +1489,7 @@
 
     theatreFade += (theatreTarget - theatreFade) * 0.008;
 
-    // ── BASE: dark contour always on main canvas ──
+    // ── BASE: dark contour ──
     const baseBr = (0.5 - theatreFade * 0.44).toFixed(2);
     bgCtx.save();
     bgCtx.globalAlpha = 0.07 + theatreFade * 0.88;
@@ -1488,54 +1499,36 @@
 
     if (theatreFade < 0.05) return;
 
-    ensureOffscreen(W, H);
+    // ── CONSOLE: drawn once, composited at fixed alpha ──
+    if (consoleReady) {
+      bgCtx.save();
+      bgCtx.globalAlpha = theatreFade * 0.6;
+      bgCtx.drawImage(offConsole, 0, 0);
+      bgCtx.restore();
+    }
 
-    // ── CONSOLE LAYER (offscreen) — static, no audio ──
-    const ctxC = offConsole.getContext('2d');
-    ctxC.clearRect(0, 0, W, H);
-    ctxC.save();
-    ctxC.filter = 'grayscale(100%) brightness(0.45) contrast(220%)';
-    ctxC.drawImage(bgImg, 0, 0, W, H);
-    ctxC.restore();
-    // Mask: keep bottom/console area only
-    ctxC.save();
-    ctxC.globalCompositeOperation = 'destination-in';
-    const cx = W * 0.42, cy = H * 0.75;
-    const cg = ctxC.createRadialGradient(cx, cy, W * 0.02, cx, cy, W * 0.42);
-    cg.addColorStop(0,   'rgba(0,0,0,1)');
-    cg.addColorStop(0.5, 'rgba(0,0,0,0.7)');
-    cg.addColorStop(1,   'rgba(0,0,0,0)');
-    ctxC.fillStyle = cg;
-    ctxC.fillRect(0, 0, W, H);
-    ctxC.restore();
-    // Composite onto main canvas — static alpha
-    bgCtx.save();
-    bgCtx.globalAlpha = theatreFade * 0.6;
-    bgCtx.drawImage(offConsole, 0, 0);
-    bgCtx.restore();
-
-    // ── STAGE LIGHTS LAYER (offscreen) — audio reactive, top area only ──
+    // ── STAGE LIGHTS: audio-reactive, top area only ──
+    if (!offStage || offStage.width !== W) {
+      offStage = document.createElement('canvas');
+      offStage.width = W; offStage.height = H;
+    }
     const ctxS = offStage.getContext('2d');
     ctxS.clearRect(0, 0, W, H);
-    const lightBr = (0.2 + level * 1.8).toFixed(2);
+    const lightBr = (0.15 + level * 2.2).toFixed(2);
     ctxS.save();
     ctxS.filter = `grayscale(100%) brightness(${lightBr}) contrast(200%)`;
     ctxS.drawImage(bgImg, 0, 0, W, H);
     ctxS.restore();
-    // Mask: keep top/stage area only
-    ctxS.save();
     ctxS.globalCompositeOperation = 'destination-in';
     const sg = ctxS.createLinearGradient(0, 0, 0, H);
     sg.addColorStop(0,    'rgba(0,0,0,1)');
-    sg.addColorStop(0.40, 'rgba(0,0,0,0.8)');
+    sg.addColorStop(0.42, 'rgba(0,0,0,0.8)');
     sg.addColorStop(0.60, 'rgba(0,0,0,0)');
     sg.addColorStop(1,    'rgba(0,0,0,0)');
     ctxS.fillStyle = sg;
     ctxS.fillRect(0, 0, W, H);
-    ctxS.restore();
-    // Composite onto main — audio-reactive alpha
     bgCtx.save();
-    bgCtx.globalAlpha = theatreFade * Math.min(level * 1.5, 0.85);
+    bgCtx.globalAlpha = theatreFade * Math.min(level * 1.8, 0.9);
     bgCtx.globalCompositeOperation = 'screen';
     bgCtx.drawImage(offStage, 0, 0);
     bgCtx.restore();
@@ -1586,6 +1579,8 @@
         micLabel.textContent = 'STOP';
         // Enter theatre mode — slow fade handled in drawBG
         theatreTarget = 1;
+        consoleReady = false;
+        buildConsoleLayer(bgCanvas.width, bgCanvas.height);
         document.body.classList.add('theatre-mode');
         animate();
       }).catch(e => console.error('Play failed:', e));
@@ -1603,7 +1598,7 @@
       micIcon.textContent = '▶';
       micLabel.textContent = 'PLAY';
       // Exit theatre mode
-      theatreTarget = 0; theatreFade = 0;
+      theatreTarget = 0; theatreFade = 0; consoleReady = false;
       document.body.classList.remove('theatre-mode');
       vuSmooth = 0; drawBG(0);
     }
