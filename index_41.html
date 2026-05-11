@@ -1,0 +1,1511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AudioWorks — Professional Audio Services</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-card: #f5f5f3;
+    --bg-dark-card: #eeede9;
+    --text: #111111;
+    --text-secondary: #555555;
+    --border: #d0cfc9;
+    --accent: #111111;
+    --white: #ffffff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; overflow-x: hidden; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* ─── PHOTO BACKGROUND via canvas ─── */
+  #bg-canvas-wrap {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+  #bg-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* Everything above the background */
+  nav, .page { position: relative; z-index: 1; }
+
+  /* ─── NAV ─── */
+  nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 4rem;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: rgba(255,255,255,0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 100;
+  }
+
+  .logo {
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary);
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 2.5rem;
+    align-items: center;
+  }
+
+  .nav-links a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+    cursor: pointer;
+  }
+
+  .nav-links a:hover { opacity: 1; }
+
+  .nav-cta {
+    opacity: 1 !important;
+    border: 1.5px solid rgba(0,0,0,0.3);
+    padding: 0.5rem 1.2rem;
+    border-radius: 4px;
+    transition: background 0.2s !important;
+    color: var(--text-secondary) !important;
+  }
+
+  .nav-cta:hover { background: rgba(0,0,0,0.06) !important; }
+
+  /* ─── PAGES ─── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ─── HERO ─── */
+  .hero {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 5rem 4rem 4rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .hero h1 {
+    font-size: clamp(1.4rem, 3vw, 2.8rem);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.01em;
+    margin-bottom: 1.5rem;
+    white-space: nowrap;
+    color: var(--text-secondary);
+  }
+
+  .hero-sub {
+    font-size: 1.05rem;
+    color: var(--text-secondary);
+    max-width: 480px;
+    line-height: 1.75;
+  }
+
+  .btn-group { display: flex; gap: 1.2rem; flex-wrap: wrap; }
+
+  .btn-primary {
+    background: var(--text);
+    color: var(--white);
+    padding: 0.9rem 2rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 4px;
+    display: inline-block;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+    border: none;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  }
+
+  .btn-secondary {
+    border: 1.5px solid rgba(0,0,0,0.3);
+    color: var(--text);
+    padding: 0.9rem 2rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 4px;
+    display: inline-block;
+    transition: all 0.2s;
+    cursor: pointer;
+    background: transparent;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .btn-secondary:hover { background: rgba(0,0,0,0.06); }
+
+  /* ─── SECTIONS ─── */
+  .section {
+    padding: 5rem 4rem;
+    border-bottom: 1px solid rgba(0,0,0,0.07);
+  }
+
+  .section-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    color: var(--text-secondary);
+    font-weight: 600;
+    margin-bottom: 2.5rem;
+  }
+
+  .section h2 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 3rem;
+    letter-spacing: -0.01em;
+    color: var(--text-secondary);
+  }
+
+  /* SERVICE CARDS */
+  .service-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  .service-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(0,0,0,0.12);
+    padding: 3rem;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    transition: border-color 0.3s, transform 0.3s, background 0.3s;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .service-card:hover {
+    border-color: rgba(0,0,0,0.25);
+    background: rgba(255,255,255,0.07);
+    transform: translateY(-3px);
+  }
+
+  .service-tag {
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+
+  .service-card h3 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--text-secondary);
+  }
+
+  .service-card p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.75;
+    flex: 1;
+  }
+
+  .service-features {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .service-features span {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .service-features span::before {
+    content: '✓';
+    color: var(--text);
+    font-weight: 700;
+    font-size: 0.75rem;
+  }
+
+  .learn-more-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0.7rem 1.5rem;
+    border: 1.5px solid rgba(0,0,0,0.15);
+    border-radius: 4px;
+    background: transparent;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.2s;
+    align-self: flex-start;
+  }
+
+  .learn-more-btn:hover {
+    background: var(--text);
+    color: var(--white);
+    border-color: var(--text);
+  }
+
+  .learn-more-btn .arrow { transition: transform 0.2s; }
+  .learn-more-btn:hover .arrow { transform: translateX(4px); }
+
+  /* WHY AUDIOWORKS */
+  .why-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2rem;
+  }
+
+  .why-item {
+    padding-top: 1.5rem;
+    border-top: 2px solid rgba(0,0,0,0.1);
+    transition: border-top-color 0.3s;
+  }
+
+  .why-item:hover { border-top-color: var(--text); }
+
+  .why-item h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.8rem;
+    color: var(--text-secondary);
+  }
+
+  .why-item p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.7;
+  }
+
+  /* CTA */
+  .cta-section {
+    padding: 7rem 4rem;
+    background: rgba(255,255,255,0.03);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    text-align: center;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+  }
+
+  .cta-section h2 {
+    font-size: clamp(2rem, 4.5vw, 3.5rem);
+    font-weight: 700;
+    margin-bottom: 1.2rem;
+    letter-spacing: -0.01em;
+    color: var(--text-secondary);
+  }
+
+  .cta-section p {
+    color: var(--text-secondary);
+    margin-bottom: 2.5rem;
+    font-size: 1rem;
+  }
+
+  /* SERVICE PAGE */
+  .service-hero {
+    padding: 5rem 4rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    margin-bottom: 3rem;
+    background: none;
+    border: none;
+    font-family: 'Inter', sans-serif;
+    transition: color 0.2s;
+    padding: 0;
+  }
+
+  .back-btn:hover { color: var(--text); }
+
+  .service-hero h1 {
+    font-size: clamp(2.5rem, 6vw, 5rem);
+    font-weight: 700;
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.5rem;
+    color: var(--text-secondary);
+  }
+
+  .service-hero p {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    max-width: 500px;
+    line-height: 1.75;
+    margin-bottom: 2.5rem;
+  }
+
+  /* STEPS */
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+  }
+
+  .step {
+    border: 1px solid rgba(0,0,0,0.1);
+    padding: 2rem;
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 4px;
+    transition: border-color 0.3s;
+  }
+
+  .step:hover { border-color: rgba(0,0,0,0.3); }
+
+  .step-num {
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    color: var(--text-secondary);
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+
+  .step h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.7rem;
+    color: var(--text-secondary);
+  }
+
+  .step p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.65;
+  }
+
+  /* PRICING GRID */
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+
+  .price-card {
+    border: 1px solid rgba(0,0,0,0.1);
+    padding: 2rem;
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 4px;
+    transition: border-color 0.3s, transform 0.3s;
+  }
+
+  .price-card:hover {
+    border-color: rgba(0,0,0,0.4);
+    transform: translateY(-3px);
+  }
+
+  .price-name {
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    color: var(--text-secondary);
+    font-weight: 600;
+    margin-bottom: 0.8rem;
+  }
+
+  .price-main {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 0.3rem;
+    color: var(--text-secondary);
+  }
+
+  .price-main span { font-size: 0.8rem; color: var(--text-secondary); font-weight: 400; }
+  .price-desc { font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.8rem; line-height: 1.5; }
+
+  .order-btn {
+    display: inline-block;
+    margin-top: 1.2rem;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    color: var(--text);
+    cursor: pointer;
+    font-weight: 600;
+    background: none;
+    border: none;
+    font-family: 'Inter', sans-serif;
+    padding: 0;
+    transition: opacity 0.2s;
+  }
+
+  .order-btn:hover { opacity: 0.5; }
+
+  /* STEMS GRID */
+  .stems-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    margin-bottom: 0;
+  }
+
+  .stem-card {
+    background: rgba(255,255,255,0.03);
+    padding: 2rem 1.5rem;
+    transition: background 0.3s;
+  }
+
+  .stem-card:hover { background: rgba(255,255,255,0.07); }
+
+  .stem-card h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+  }
+
+  .stem-card p {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  .stem-card-wide { grid-column: span 2; }
+
+  /* DEMO BLOCKS */
+  .demo-block {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+
+  .demo-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    background: rgba(255,255,255,0.04);
+    border-bottom: 1px solid rgba(0,0,0,0.07);
+  }
+
+  .demo-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+
+  .demo-title { font-size: 0.95rem; font-weight: 600; color: var(--text-secondary); }
+
+  .demo-player {
+    padding: 1.2rem 1.5rem;
+    background: rgba(255,255,255,0.02);
+  }
+
+  audio { width: 100%; height: 30px; accent-color: var(--text); }
+
+  /* FORM PAGE */
+  .form-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 5rem 2rem;
+  }
+
+  .form-box {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(0,0,0,0.1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 3rem;
+    border-radius: 4px;
+  }
+
+  .form-box h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+  }
+
+  .form-subtitle {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 2.5rem;
+  }
+
+  .service-select-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .radio-option {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    cursor: pointer;
+    padding: 0.9rem 1.2rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .radio-option:hover { border-color: rgba(0,0,0,0.4); background: rgba(0,0,0,0.03); }
+
+  .radio-option input[type="radio"] { cursor: pointer; width: 16px; height: 16px; accent-color: var(--text); }
+
+  .radio-option label { cursor: pointer; font-weight: 500; font-size: 0.9rem; color: var(--text); }
+
+  .form-group { margin-bottom: 1.5rem; }
+
+  .form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: var(--text);
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: var(--white);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 4px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    transition: border-color 0.2s;
+  }
+
+  .form-group input::placeholder,
+  .form-group textarea::placeholder { color: #aaaaaa; }
+
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus {
+    outline: none;
+    border-color: rgba(0,0,0,0.5);
+  }
+
+  .form-group select option { background: var(--white); color: var(--text); }
+
+  .form-group textarea { resize: vertical; min-height: 90px; }
+
+  .conditional-section { display: none; }
+  .conditional-section.active { display: block; }
+
+  .submit-btn {
+    width: 100%;
+    padding: 1rem;
+    background: var(--text);
+    color: var(--white);
+    border: none;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: transform 0.2s, box-shadow 0.2s;
+    margin-top: 0.5rem;
+  }
+
+  .submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  }
+
+  /* FOOTER */
+  footer {
+    padding: 2rem 4rem;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    border-top: 1px solid var(--border);
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  /* ─── ABOUT PAGE specific ─── */
+  .about-production-row {
+    background: rgba(255,255,255,0.03);
+    padding: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 2rem;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .about-production-row:last-child { border-bottom: none; }
+
+  .about-production-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    color: var(--text-secondary);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .about-production-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+  }
+
+  .about-production-desc {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  .view-prod-link {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+    text-decoration: none;
+    border: 1px solid var(--border);
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    transition: all 0.2s;
+    align-self: flex-start;
+  }
+
+  .view-prod-link:hover {
+    border-color: var(--text);
+    color: var(--text);
+  }
+
+  /* contact info rows */
+  .contact-info-row {
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 4px;
+    padding: 1.8rem;
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .contact-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    color: var(--text-secondary);
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+  }
+
+  /* ══════════════════════════════════════
+     MIC WIDGET — fixed corner
+  ══════════════════════════════════════ */
+  #mic-widget {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.6rem;
+  }
+
+
+
+  #mic-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: rgba(255,255,255,0.95);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    transition: all 0.2s;
+    font-size: 1.15rem;
+    backdrop-filter: blur(6px);
+    position: relative;
+  }
+
+  #mic-btn:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    border-color: rgba(0,0,0,0.3);
+  }
+
+  #mic-btn.active {
+    background: var(--text);
+    border-color: var(--text);
+  }
+
+  #mic-btn.active::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 2px solid rgba(0,0,0,0.15);
+    animation: mic-pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes mic-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.6; }
+    50% { transform: scale(1.2); opacity: 0; }
+  }
+
+  #mic-icon { pointer-events: none; }
+  #mic-btn.active #mic-icon { filter: invert(1); }
+
+  #mic-label {
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+    text-align: center;
+  }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 900px) {
+    nav { padding: 1.2rem 1.5rem; }
+    .nav-links a:not(.nav-cta) { display: none; }
+    .hero, .section, .service-hero { padding: 3rem 1.5rem; }
+    .service-cards { grid-template-columns: 1fr; }
+    .steps { grid-template-columns: 1fr 1fr; }
+    .stems-grid { grid-template-columns: 1fr 1fr; }
+    .why-grid { grid-template-columns: 1fr 1fr; }
+    .pricing-grid { grid-template-columns: 1fr; }
+    .cta-section { padding: 4rem 1.5rem; }
+    footer { flex-direction: column; gap: 0.5rem; padding: 1.5rem; }
+    #mic-widget { bottom: 1.2rem; right: 1.2rem; }
+    #oscilloscope-container { width: 160px; height: 60px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     BACKGROUND CANVAS
+════════════════════════════════════════════ -->
+<div id="bg-canvas-wrap">
+  <canvas id="bg-canvas"></canvas>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     MIC WIDGET (fixed corner, all pages)
+════════════════════════════════════════════ -->
+<div id="mic-widget">
+
+
+
+  <button id="mic-btn" title="Play / Stop" onclick="toggleMic()">
+    <span id="mic-icon">▶</span>
+  </button>
+  <div id="mic-label">PLAY</div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     NAV
+════════════════════════════════════════════ -->
+<nav>
+  <div class="logo" onclick="showPage('home')" style="cursor:pointer;">AUDIOWORKS</div>
+  <div class="nav-links">
+    <a onclick="showPage('transcription')">Transcription</a>
+    <a onclick="showPage('stems')">Stem Separation</a>
+    <a onclick="showPage('about')">About</a>
+    <a onclick="showPage('contact')" class="nav-cta">CONTACT →</a>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════
+     HOME PAGE
+════════════════════════════════════════════ -->
+<div id="home" class="page active">
+
+  <section class="hero">
+    <h1>Professional audio services</h1>
+    <p class="hero-sub">Convert speech to text with AI + human accuracy.<br>Separate songs into clean stems with precision.<br>Fast turnaround, professional quality.</p>
+  </section>
+
+  <section class="section" id="services-home">
+    <div class="section-label">// OUR SERVICES</div>
+    <div class="service-cards">
+
+      <div class="service-card">
+        <div class="service-tag">SERVICE 01</div>
+        <h3>Transcription</h3>
+        <p>Convert your audio or video into accurate, polished text. AI-powered processing combined with professional human review for maximum accuracy.</p>
+        <div class="service-features">
+          <span>AI + Human Review</span>
+          <span>Greek</span>
+          <span>24-48h turnaround</span>
+          <span>Any format accepted</span>
+        </div>
+        <button class="learn-more-btn" onclick="showPage('transcription')">
+          Learn More <span class="arrow">→</span>
+        </button>
+      </div>
+
+      <div class="service-card">
+        <div class="service-tag">SERVICE 02</div>
+        <h3>Stem Separation</h3>
+        <p>Isolate vocals, drums, bass, and more from any song. Professional-grade AI processing with human review ensures clean, usable stems for any project.</p>
+        <div class="service-features">
+          <span>AI + Human Review</span>
+          <span>Up to 7 stems</span>
+          <span>Any genre</span>
+          <span>Fast delivery</span>
+        </div>
+        <button class="learn-more-btn" onclick="showPage('stems')">
+          Learn More <span class="arrow">→</span>
+        </button>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-label">// WHY AUDIOWORKS</div>
+    <div class="why-grid">
+      <div class="why-item">
+        <h3>AI + Human Expert</h3>
+        <p>Every result is reviewed by a professional audio engineer. No shortcuts.</p>
+      </div>
+      <div class="why-item">
+        <h3>Greek</h3>
+        <p>Transcription in Greek. Accents and dialects handled with precision.</p>
+      </div>
+      <div class="why-item">
+        <h3>Fast Turnaround</h3>
+        <p>Available 9AM–9PM Athens time (GMT+3). Most orders within 24-48 hours.</p>
+      </div>
+      <div class="why-item">
+        <h3>Professional Quality</h3>
+        <p>Trusted by producers, podcasters, content creators, and businesses.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-section">
+    <h2>Ready to get started?</h2>
+    <p>Contact us and get professional results fast.</p>
+    <button class="btn-primary" onclick="showPage('contact')">CONTACT US</button>
+  </section>
+
+  <section class="section">
+    <div class="section-label">// THE PERSON BEHIND THE SERVICE</div>
+    <div style="max-width:680px;">
+      <h2 style="font-size:1.8rem; margin-bottom:1.2rem;">Sound Engineer.<br>15+ years on stage.</h2>
+      <p style="color:var(--text-secondary); line-height:1.85; font-size:0.95rem; margin-bottom:2rem;">Every result at AudioWorks is reviewed by a professional with real-world experience — not just software. From ancient theatres to international festivals, the same ear that mixes live productions handles your audio.</p>
+      <button class="learn-more-btn" onclick="showPage('about')">See Full Background <span class="arrow">→</span></button>
+    </div>
+  </section>
+
+  <footer>
+    <div>© 2025 AUDIOWORKS · Kostis Pavlopoulos</div>
+    <div>splitlabstems@gmail.com</div>
+  </footer>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TRANSCRIPTION PAGE
+════════════════════════════════════════════ -->
+<div id="transcription" class="page">
+
+  <section class="service-hero">
+    <button class="back-btn" onclick="showPage('home')">← Back to Home</button>
+    <h1>Transcription</h1>
+    <p>Convert your audio or video files into accurate text. AI-powered processing with professional human review — in Greek.</p>
+  </section>
+
+  <section class="section">
+    <div class="section-label">// HOW IT WORKS</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <h3>Send Your File</h3>
+        <p>Submit your audio or video via WeTransfer or Google Drive through our request form.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <h3>AI Processing</h3>
+        <p>Advanced AI transcribes your audio with high accuracy across accents and dialects.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <h3>Human Review</h3>
+        <p>A professional reviews and corrects every word before delivery.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <h3>Receive Transcript</h3>
+        <p>Get your polished transcript delivered to your inbox. Ready to use.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-label">// PRICING</div>
+    <div class="pricing-grid">
+      <div class="price-card">
+        <div class="price-name">SHORT</div>
+        <div class="price-main">€12 <span>/ up to 10 min</span></div>
+        <div class="price-desc">Interviews, clips, or short recordings. Delivered in 24h.</div>
+        <button class="order-btn" onclick="showForm('transcription')">Order Now →</button>
+      </div>
+      <div class="price-card">
+        <div class="price-name">MEDIUM</div>
+        <div class="price-main">€18 <span>/ 10–30 min</span></div>
+        <div class="price-desc">Podcasts, meetings, or longer recordings. Delivered in 48h.</div>
+        <button class="order-btn" onclick="showForm('transcription')">Order Now →</button>
+      </div>
+      <div class="price-card">
+        <div class="price-name">EXTENDED</div>
+        <div class="price-main">€0.50 <span>/ min</span></div>
+        <div class="price-desc">30+ minutes — custom quotes available on request.</div>
+        <button class="order-btn" onclick="showForm('transcription')">Order Now →</button>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div>© 2025 AUDIOWORKS · Kostis Pavlopoulos</div>
+    <div>splitlabstems@gmail.com</div>
+  </footer>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     STEM SEPARATION PAGE
+════════════════════════════════════════════ -->
+<div id="stems" class="page">
+
+  <section class="service-hero">
+    <button class="back-btn" onclick="showPage('home')">← Back to Home</button>
+    <h1>Stem Separation</h1>
+    <p>Isolate any element of a song — vocals, drums, bass, and more — with professional-grade accuracy and human review.</p>
+  </section>
+
+  <section class="section">
+    <div class="section-label">// HOW IT WORKS</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <h3>Send Your Track</h3>
+        <p>Submit via WeTransfer or Google Drive through our request form.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <h3>AI Processing</h3>
+        <p>Our AI pipeline separates your track into clean stems with precision.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <h3>Human Review</h3>
+        <p>A professional audio engineer reviews every stem before delivery.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <h3>Receive Stems</h3>
+        <p>Get your stems via WeTransfer. Ready for your project.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-label">// WHAT YOU GET</div>
+    <div class="stems-grid">
+      <div class="stem-card"><h3>Vocals</h3><p>Clean isolated vocal track for remixes and karaoke.</p></div>
+      <div class="stem-card"><h3>Instrumental</h3><p>Full instrumental — track without vocals.</p></div>
+      <div class="stem-card"><h3>Drums</h3><p>Isolated drum track for remixing and beat replacement.</p></div>
+      <div class="stem-card"><h3>Without Drums</h3><p>Full mix with drums removed.</p></div>
+      <div class="stem-card"><h3>Bass</h3><p>Isolated bass stem for mixing and production.</p></div>
+      <div class="stem-card"><h3>Without Bass</h3><p>Full mix with bass removed.</p></div>
+      <div class="stem-card stem-card-wide"><h3>Other</h3><p>All remaining instruments — synths, guitars, keys, and more.</p></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-label">// PRICING</div>
+    <div class="pricing-grid">
+      <div class="price-card">
+        <div class="price-name">SHORT</div>
+        <div class="price-main">€12 <span>/ track</span></div>
+        <div class="price-desc">Up to 5 min · 4 stems · Human reviewed</div>
+        <button class="order-btn" onclick="showForm('stems')">Order Now →</button>
+      </div>
+      <div class="price-card">
+        <div class="price-name">MEDIUM</div>
+        <div class="price-main">€16 <span>/ track</span></div>
+        <div class="price-desc">5–10 min · 4 stems · Human reviewed</div>
+        <button class="order-btn" onclick="showForm('stems')">Order Now →</button>
+      </div>
+      <div class="price-card">
+        <div class="price-name">LONG</div>
+        <div class="price-main">€25 <span>/ track</span></div>
+        <div class="price-desc">10+ min · Full human review</div>
+        <button class="order-btn" onclick="showForm('stems')">Order Now →</button>
+      </div>
+      <div class="price-card">
+        <div class="price-name">PACK 5</div>
+        <div class="price-main">€40 <span>/ 5 tracks</span></div>
+        <div class="price-desc">€8 per track · Priority delivery</div>
+        <button class="order-btn" onclick="showForm('stems')">Order Now →</button>
+      </div>
+      <div class="price-card">
+        <div class="price-name">PACK 10</div>
+        <div class="price-main">€80 <span>/ 10 tracks</span></div>
+        <div class="price-desc">€8 per track · Priority delivery</div>
+        <button class="order-btn" onclick="showForm('stems')">Order Now →</button>
+      </div>
+      <div class="price-card">
+        <div class="price-name">MONTHLY</div>
+        <div class="price-main">€150 <span>/ mo</span></div>
+        <div class="price-desc">25 tracks · 2 revisions · Support</div>
+        <button class="order-btn" onclick="showForm('stems')">Order Now →</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-label">// LISTEN: BEFORE & AFTER</div>
+
+    <div class="demo-block">
+      <div class="demo-header"><span class="demo-label">ORIGINAL</span><span class="demo-title">Original Mix</span></div>
+      <div class="demo-player"><audio controls><source src="https://raw.githubusercontent.com/SplitLabStems/SLS/main/StudioKolomnaNoCopyrightOriginal.mp3" type="audio/mp3"></audio></div>
+    </div>
+    <div class="demo-block">
+      <div class="demo-header"><span class="demo-label">STEM 01</span><span class="demo-title">Vocals</span></div>
+      <div class="demo-player"><audio controls><source src="https://raw.githubusercontent.com/SplitLabStems/SLS/main/StudioKolomna-no%20Copyright%20music%20Edited_vocals_split_by_lalalai_preview.mp3" type="audio/mp3"></audio></div>
+    </div>
+    <div class="demo-block">
+      <div class="demo-header"><span class="demo-label">STEM 02</span><span class="demo-title">Instrumental</span></div>
+      <div class="demo-player"><audio controls><source src="https://raw.githubusercontent.com/SplitLabStems/SLS/main/StudioKolomna-no%20Copyright%20music%20Edited_no_vocals_split_by_lalalai_preview.mp3" type="audio/mp3"></audio></div>
+    </div>
+    <div class="demo-block">
+      <div class="demo-header"><span class="demo-label">STEM 03</span><span class="demo-title">Drums</span></div>
+      <div class="demo-player"><audio controls><source src="https://raw.githubusercontent.com/SplitLabStems/SLS/main/StudioKolomna-no%20Copyright%20music%20Edited_drum_split_by_lalalai_preview.mp3" type="audio/mp3"></audio></div>
+    </div>
+    <div class="demo-block">
+      <div class="demo-header"><span class="demo-label">STEM 04</span><span class="demo-title">Without Drums</span></div>
+      <div class="demo-player"><audio controls><source src="https://raw.githubusercontent.com/SplitLabStems/SLS/main/StudioKolomna-no%20Copyright%20music%20Edited_no_drum_split_by_lalalai_preview.mp3" type="audio/mp3"></audio></div>
+    </div>
+    <div class="demo-block">
+      <div class="demo-header"><span class="demo-label">STEM 05</span><span class="demo-title">Bass</span></div>
+      <div class="demo-player"><audio controls><source src="https://raw.githubusercontent.com/SplitLabStems/SLS/main/StudioKolomna-no%20Copyright%20music%20Edited_bass_split_by_lalalai_preview.mp3" type="audio/mp3"></audio></div>
+    </div>
+    <div class="demo-block">
+      <div class="demo-header"><span class="demo-label">STEM 06</span><span class="demo-title">Without Bass</span></div>
+      <div class="demo-player"><audio controls><source src="https://raw.githubusercontent.com/SplitLabStems/SLS/main/StudioKolomna-no%20Copyright%20music%20Edited_no_bass_split_by_lalalai_preview.mp3" type="audio/mp3"></audio></div>
+    </div>
+  </section>
+
+  <footer>
+    <div>© 2025 AUDIOWORKS · Kostis Pavlopoulos</div>
+    <div>splitlabstems@gmail.com</div>
+  </footer>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     FORM — TRANSCRIPTION
+════════════════════════════════════════════ -->
+<div id="form-transcription" class="page">
+  <div class="form-container">
+    <div class="form-box">
+      <button class="back-btn" onclick="showPage('transcription')" style="margin-bottom:1.5rem;">← Back to Transcription</button>
+      <h2>Transcription Request</h2>
+      <p class="form-subtitle">Fill in the details below and we'll get back to you within 24 hours.</p>
+      <form onsubmit="handleSubmit(event)">
+        <div class="form-group"><label>Your Name *</label><input type="text" required placeholder="John Doe"></div>
+        <div class="form-group"><label>Email Address *</label><input type="email" required placeholder="you@example.com"></div>
+        <div class="form-group">
+          <label>Audio Duration *</label>
+          <select required>
+            <option value="">Select duration...</option>
+            <option>Up to 10 minutes (€12)</option>
+            <option>10–30 minutes (€18)</option>
+            <option>30+ minutes (€0.50/min)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Language *</label>
+          <select required>
+            <option value="">Greek</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Additional Notes</label><textarea placeholder="Any special requests or details..."></textarea></div>
+        <button type="submit" class="submit-btn">SUBMIT REQUEST</button>
+      </form>
+    </div>
+  </div>
+  <footer>
+    <div>© 2025 AUDIOWORKS · Kostis Pavlopoulos</div>
+    <div>splitlabstems@gmail.com</div>
+  </footer>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     FORM — STEMS
+════════════════════════════════════════════ -->
+<div id="form-stems" class="page">
+  <div class="form-container">
+    <div class="form-box">
+      <button class="back-btn" onclick="showPage('stems')" style="margin-bottom:1.5rem;">← Back to Stem Separation</button>
+      <h2>Stem Separation Request</h2>
+      <p class="form-subtitle">Fill in the details below and we'll get back to you within 24 hours.</p>
+      <form onsubmit="handleSubmit(event)">
+        <div class="form-group"><label>Your Name *</label><input type="text" required placeholder="John Doe"></div>
+        <div class="form-group"><label>Email Address *</label><input type="email" required placeholder="you@example.com"></div>
+        <div class="form-group">
+          <label>Track Duration *</label>
+          <select required>
+            <option value="">Select duration...</option>
+            <option>Up to 5 minutes (€12)</option>
+            <option>5–10 minutes (€16)</option>
+            <option>10+ minutes (€25)</option>
+            <option>Pack of 5 tracks (€40)</option>
+            <option>Pack of 10 tracks (€80)</option>
+            <option>Monthly plan (€150/mo)</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Additional Notes</label><textarea placeholder="Any special requests or details..."></textarea></div>
+        <button type="submit" class="submit-btn">SUBMIT REQUEST</button>
+      </form>
+    </div>
+  </div>
+  <footer>
+    <div>© 2025 AUDIOWORKS · Kostis Pavlopoulos</div>
+    <div>splitlabstems@gmail.com</div>
+  </footer>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     CONTACT PAGE
+════════════════════════════════════════════ -->
+<div id="contact" class="page">
+  <div class="form-container">
+    <div class="form-box">
+      <button class="back-btn" onclick="showPage('home')" style="margin-bottom:1.5rem;">← Back to Home</button>
+      <h2>Get in Touch</h2>
+      <p class="form-subtitle">We're available 9AM–9PM Athens time (GMT+3). We'll get back to you within a few hours.</p>
+      <div style="display:flex; flex-direction:column; gap:1.5rem; margin-top:2rem;">
+
+        <div class="contact-info-row">
+          <div style="font-size:1.5rem;">✉️</div>
+          <div>
+            <div class="contact-label">EMAIL</div>
+            <a href="mailto:splitlabstems@gmail.com" style="color:var(--text); text-decoration:none; font-weight:600; font-size:1rem; transition:opacity 0.2s;" onmouseover="this.style.opacity=0.5" onmouseout="this.style.opacity=1">splitlabstems@gmail.com</a>
+          </div>
+        </div>
+
+        <div class="contact-info-row">
+          <div style="font-size:1.5rem;">🕐</div>
+          <div>
+            <div class="contact-label">AVAILABILITY</div>
+            <div style="font-weight:600; font-size:1rem; color:var(--text);">9AM – 9PM · Athens (GMT+3)</div>
+          </div>
+        </div>
+
+        <div class="contact-info-row">
+          <div style="font-size:1.5rem;">⚡</div>
+          <div>
+            <div class="contact-label">RESPONSE TIME</div>
+            <div style="font-weight:600; font-size:1rem; color:var(--text);">Within a few hours</div>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="margin-top:2.5rem; padding-top:2rem; border-top:1px solid var(--border);">
+        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1.2rem;">Ready to place an order? Go directly to a service:</p>
+        <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+          <button class="learn-more-btn" onclick="showPage('transcription')" style="align-self:auto;">Transcription <span class="arrow">→</span></button>
+          <button class="learn-more-btn" onclick="showPage('stems')" style="align-self:auto;">Stem Separation <span class="arrow">→</span></button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <footer>
+    <div>© 2025 AUDIOWORKS · Kostis Pavlopoulos</div>
+    <div>splitlabstems@gmail.com</div>
+  </footer>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     ABOUT PAGE
+════════════════════════════════════════════ -->
+<div id="about" class="page">
+
+  <section class="service-hero">
+    <button class="back-btn" onclick="showPage('home')">← Back to Home</button>
+    <h1>Kostis Pavlopoulos</h1>
+    <p>Sound Engineer · FOH & Monitor · Programmer<br>Athens, Greece</p>
+  </section>
+
+  <section class="section">
+    <div class="section-label">// BACKGROUND</div>
+    <div style="max-width:680px;">
+      <p style="color:var(--text-secondary); line-height:1.85; font-size:0.95rem;">Professional sound engineer with 15+ years of experience in live theatre, contemporary dance, and international festivals. Specialized in FOH mixing, monitor engineering, sound programming, and wireless RF coordination. The same expertise and attention to detail that goes into every live production goes into every AudioWorks order.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-label">// SELECTED PRODUCTIONS</div>
+    <div style="border:1px solid var(--border); border-radius:4px; overflow:hidden;">
+
+      <div class="about-production-row">
+        <div>
+          <div class="about-production-label">CHRISTOS PAPADOPOULOS</div>
+          <div class="about-production-title">My Fierce Ignorant Step</div>
+          <div class="about-production-desc">FOH & Monitor Engineer · Sound Programmer<br>Onassis Stegi Athens · Julidans Amsterdam · Festival de Marseille · Romaeuropa · Théâtre de la Ville Paris · December Dance Brugge · Dublin Dance Festival · One Dance Festival Bulgaria · Dansa Barcelona · Festival de Otoño Madrid · Teatro Municipal do Porto · New Baltic Dance Vilnius</div>
+        </div>
+        <a href="https://www.onassis.org/whats-on/my-fierce-ignorant-step-christos-papadopoulos" target="_blank" class="view-prod-link">View Production →</a>
+      </div>
+
+      <div class="about-production-row">
+        <div>
+          <div class="about-production-label">EURIPIDES LASKARIDIS · OSMOSIS</div>
+          <div class="about-production-title">Lapis Lazuli</div>
+          <div class="about-production-desc">FOH & Monitor Engineer · Operator<br>One Dance Festival Bulgaria · Julidans Amsterdam · Théâtre de la Cité Paris · Torinodanza · Festival Aperto Reggio Emilia · Charleroi Danse · Théâtre de Liège · Santiago a Mil Chile · Espoo Teatteri Helsinki · Teatro della Pergola Florence · Maribor Theatre Festival</div>
+        </div>
+        <a href="https://euripides.info/lapislazuli" target="_blank" class="view-prod-link">View Production →</a>
+      </div>
+
+      <div class="about-production-row">
+        <div>
+          <div class="about-production-label">KATERINA EVANGELATOS · ATHENS EPIDAURUS FESTIVAL</div>
+          <div class="about-production-title">Hippolytus — National Theatre of Greece</div>
+          <div class="about-production-desc">Sound Designer<br>Ancient Theatre of Epidaurus</div>
+        </div>
+        <a href="https://aefestival.gr/festival_events/hippolytus/?lang=en" target="_blank" class="view-prod-link">View Production →</a>
+      </div>
+
+      <div class="about-production-row">
+        <div>
+          <div class="about-production-label">EURIPIDES LASKARIDIS · OSMOSIS</div>
+          <div class="about-production-title">ELENIT</div>
+          <div class="about-production-desc">FOH & Monitor Engineer · Operator<br>Onassis Stegi Athens · Les Halles de Schaerbeek Brussels · Teatro Municipal Rivoli Porto · Biennale de la Danse Lyon · Julidans Amsterdam · Dimitria Festival Thessaloniki · Théâtre de Liège · Charleroi Danse · Teatro della Pergola Florence · Teatro delle Muse Ancona</div>
+        </div>
+        <a href="https://euripides.info/elenit" target="_blank" class="view-prod-link">View Production →</a>
+      </div>
+
+      <div class="about-production-row">
+        <div>
+          <div class="about-production-label">EURIPIDES LASKARIDIS · OSMOSIS</div>
+          <div class="about-production-title">TITANS</div>
+          <div class="about-production-desc">FOH & Monitor Engineer · Programmer<br>GuiDance Festival Portugal · KLAP Lausanne · Théâtre Sévelin Marseille · Inteatro Festival Italy · Festival TransAmériques Montreal · Les Brigittines Brussels · Tanz im August Berlin · Biennale de la Danse Lyon · Hong Kong Arts Festival · New Baltic Dance Vilnius · Onassis Stegi Athens · Teatros del Canal Madrid</div>
+        </div>
+        <a href="https://euripides.info" target="_blank" class="view-prod-link">View Production →</a>
+      </div>
+
+      <div class="about-production-row">
+        <div>
+          <div class="about-production-label">NIKOS KARATHANOS · NATIONAL THEATRE OF GREECE</div>
+          <div class="about-production-title">The Birds · Prometheus · The Cherry Orchard</div>
+          <div class="about-production-desc">FOH Engineer · Sound Programmer<br>Ancient Theatre of Epidaurus · Onassis Cultural Centre Athens · St. Ann's Warehouse New York · Santiago a Mil Chile</div>
+        </div>
+        <a href="https://www.onassis.org/press/prometheus" target="_blank" class="view-prod-link">View Production →</a>
+      </div>
+
+      <div class="about-production-row">
+        <div>
+          <div class="about-production-label">STATHIS LIVATHINOS · HOMER</div>
+          <div class="about-production-title">Homer's Iliad</div>
+          <div class="about-production-desc">Sound Engineer · Programmer · RF Coordination<br>Mitem Budapest · Sibiu International Theatre Festival · Santiago a Mil Chile · Cinars Biennale Montreal · Centro Dramático Nacional Madrid · Stadsschouwburg Amsterdam · Athens & Epidaurus Festival</div>
+        </div>
+        <a href="https://www.polyplanity.com/en/projects/iliada/" target="_blank" class="view-prod-link">View Production →</a>
+      </div>
+
+      <div class="about-production-row">
+        <div>
+          <div class="about-production-label">JASMIN VARDIMON COMPANY</div>
+          <div class="about-production-title">Pinocchio / Medusa — UK Tour</div>
+          <div class="about-production-desc">Sound & AV Operator<br>Sadler's Wells London · Edinburgh Festival Theatre · The Lowry Manchester · Theatre Royal Brighton · Nottingham Playhouse</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="cta-section">
+    <h2>Ready to work together?</h2>
+    <p>Get professional audio services backed by real experience.</p>
+    <div class="btn-group" style="justify-content:center;">
+      <button class="btn-primary" onclick="showPage('transcription')">Transcription</button>
+      <button class="btn-secondary" onclick="showPage('stems')">Stem Separation</button>
+    </div>
+  </section>
+
+  <footer>
+    <div>© 2025 AUDIOWORKS · Kostis Pavlopoulos</div>
+    <div>splitlabstems@gmail.com</div>
+  </footer>
+</div>
+
+<script>
+  /* ─── PAGE NAVIGATION ─── */
+  function showPage(id) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    window.scrollTo(0, 0);
+  }
+
+  function showForm(service) {
+    showPage('form-' + service);
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    alert('Thank you! Your request has been submitted. We\'ll contact you within 24 hours.');
+    e.target.reset();
+  }
+
+  /* ─── PLAY BUTTON + AUDIO ─── */
+  let audioCtx  = null;
+  let analyser  = null;
+  let animFrame = null;
+  let isPlaying = false;
+  let vuSmooth  = 0;
+  let ariaAudio = null;
+
+  const micBtn  = document.getElementById('mic-btn');
+  const micIcon = document.getElementById('mic-icon');
+  const micLabel= document.getElementById('mic-label');
+  const bgCanvas= document.getElementById('bg-canvas');
+  const bgCtx   = bgCanvas.getContext('2d');
+
+  // ── BACKGROUND IMAGE ──
+  const bgImg = new Image();
+  bgImg.src = 'PXL_20250426_162816225.jpg';
+
+  function resizeBgCanvas() {
+    bgCanvas.width  = window.innerWidth;
+    bgCanvas.height = window.innerHeight;
+    drawBG(0);
+  }
+
+  function drawBG(level) {
+    const W = bgCanvas.width, H = bgCanvas.height;
+    bgCtx.clearRect(0, 0, W, H);
+    if (!bgImg.complete || bgImg.naturalWidth === 0) return;
+    bgCtx.save();
+    bgCtx.globalAlpha = 0.07;
+    bgCtx.filter = 'grayscale(100%) contrast(160%) brightness(0.5)';
+    bgCtx.drawImage(bgImg, 0, 0, W, H);
+    bgCtx.restore();
+    if (level < 0.01) return;
+    const br    = Math.min(1.0 + level * 2.2, 3.0).toFixed(2);
+    const alpha = Math.min(level * 0.55, 0.52).toFixed(3);
+    bgCtx.save();
+    bgCtx.globalAlpha = parseFloat(alpha);
+    bgCtx.filter = `grayscale(100%) contrast(80%) brightness(${br})`;
+    bgCtx.globalCompositeOperation = 'screen';
+    bgCtx.drawImage(bgImg, 0, 0, W, H);
+    bgCtx.restore();
+  }
+
+  bgImg.onload = () => resizeBgCanvas();
+  window.addEventListener('resize', resizeBgCanvas);
+  resizeBgCanvas();
+
+  // ── ANIMATE: reads aria level → drives background ──
+  function animate() {
+    if (!analyser) return;
+    const buf = new Float32Array(analyser.frequencyBinCount);
+    analyser.getFloatTimeDomainData(buf);
+    let sum = 0;
+    for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+    const rms = Math.sqrt(sum / buf.length);
+    const target = Math.min(rms * 40, 1);
+    vuSmooth += (target - vuSmooth) * 0.15;
+    drawBG(vuSmooth);
+    animFrame = requestAnimationFrame(animate);
+  }
+
+  // ── TOGGLE PLAY / STOP ──
+  function toggleMic() {
+    if (!isPlaying) {
+      // START
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+      ariaAudio = new Audio('aria.mp3');
+      ariaAudio.loop = true;
+      ariaAudio.crossOrigin = 'anonymous';
+
+      const source = audioCtx.createMediaElementSource(ariaAudio);
+
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 2048;
+      analyser.smoothingTimeConstant = 0.85;
+
+      source.connect(analyser);
+      source.connect(audioCtx.destination);
+
+      ariaAudio.play().then(() => {
+        isPlaying = true;
+        micBtn.classList.add('active');
+        micIcon.textContent = '■';
+        micLabel.textContent = 'STOP';
+        animate();
+      }).catch(e => console.error('Play failed:', e));
+
+    } else {
+      // STOP
+      cancelAnimationFrame(animFrame); animFrame = null;
+      ariaAudio.pause();
+      ariaAudio.src = '';
+      ariaAudio = null;
+      audioCtx.close(); audioCtx = null;
+      analyser = null;
+      isPlaying = false;
+      micBtn.classList.remove('active');
+      micIcon.textContent = '▶';
+      micLabel.textContent = 'PLAY';
+      vuSmooth = 0; drawBG(0);
+    }
+  }
+</script>
+
+</body>
+</html>
