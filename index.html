@@ -1546,9 +1546,9 @@
     let sum = 0;
     for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
     const rms = Math.sqrt(sum / buf.length);
-    const target = Math.min(rms * 40, 1);
-    // Very slow smoothing = stable, no flicker
-    vuSmooth += (target - vuSmooth) * 0.04;
+    const target = Math.min(rms * 120, 1);
+    // Fast up, slow down = punchy but no flicker
+    vuSmooth += (target - vuSmooth) * (target > vuSmooth ? 0.3 : 0.06);
     drawBG(vuSmooth);
     animFrame = requestAnimationFrame(animate);
   }
