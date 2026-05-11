@@ -28,7 +28,77 @@
     position: relative;
   }
 
-  /* ─── THEATRE MODE — nav/content fade out slowly ─── */
+  /* ─── HERO 2-COL ─── */
+  .hero {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: center;
+  }
+
+  .hero-right {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .hero-transcript-widget {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 2rem;
+    background: rgba(255,255,255,0.6);
+    backdrop-filter: blur(10px);
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .hero-transcript-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    color: var(--text-secondary);
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+
+  .hero-transcript-output {
+    min-height: 80px;
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: var(--text);
+    margin-bottom: 1.5rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .hero-transcript-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  #mic-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.4rem;
+    background: var(--text);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  #mic-btn:hover { opacity: 0.8; }
+  #mic-btn.active { background: #c0392b; }
+
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; }
+    .hero-right { justify-content: flex-start; }
+    .hero-transcript-widget { max-width: 100%; }
+  }
   nav, .page {
     transition: opacity 15s ease;
   }
@@ -894,21 +964,6 @@
 </div>
 
 <!-- ═══════════════════════════════════════════
-     TRANSCRIPTION WIDGET (fixed corner)
-════════════════════════════════════════════ -->
-<div id="mic-widget">
-  <div id="transcript-box"></div>
-  <div id="lang-toggle">
-    <button class="lang-btn active" onclick="setLang('el-GR', this)">ΕΛ</button>
-    <button class="lang-btn" onclick="setLang('en-US', this)">EN</button>
-  </div>
-  <button id="mic-btn" title="Start / Stop" onclick="toggleMic()">
-    <span id="mic-icon">🎙</span>
-  </button>
-  <div id="mic-label">RECORD</div>
-</div>
-
-<!-- ═══════════════════════════════════════════
      NAV
 ════════════════════════════════════════════ -->
 <nav>
@@ -927,8 +982,26 @@
 <div id="home" class="page active">
 
   <section class="hero">
-    <h1>Professional audio services</h1>
-    <p class="hero-sub">Convert speech to text with AI + human accuracy.<br>Separate songs into clean stems with precision.<br>Fast turnaround, professional quality.</p>
+    <div class="hero-left">
+      <h1>Professional audio services</h1>
+      <p class="hero-sub">Convert speech to text with AI + human accuracy.<br>Separate songs into clean stems with precision.<br>Fast turnaround, professional quality.</p>
+    </div>
+    <div class="hero-right">
+      <div class="hero-transcript-widget">
+        <div class="hero-transcript-label">// TRY TRANSCRIPTION</div>
+        <div id="transcript-box" class="hero-transcript-output">Πάτα Record και μίλα...</div>
+        <div class="hero-transcript-controls">
+          <div id="lang-toggle">
+            <button class="lang-btn active" onclick="setLang('el-GR', this)">ΕΛ</button>
+            <button class="lang-btn" onclick="setLang('en-US', this)">EN</button>
+          </div>
+          <button id="mic-btn" onclick="toggleMic()">
+            <span id="mic-icon">🎙</span>
+            <span id="mic-label">RECORD</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </section>
 
   <section class="section" id="services-home">
@@ -1469,6 +1542,71 @@
   const micIcon      = document.getElementById('mic-icon');
   const micLabel     = document.getElementById('mic-label');
   const transcriptBox= document.getElementById('transcript-box');
+
+  let recognition = null;
+  let isRecording = false;
+  let currentLang = 'el-GR';
+  let stopTimer   = null;
+  let fullText    = '';
+
+  function setLang(lang, btn) {
+    currentLang = lang;
+    document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  function toggleMic() {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      transcriptBox.textContent = 'Απαιτείται Google Chrome.';
+      return;
+    }
+
+    if (!isRecording) {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SR();
+      recognition.lang = currentLang;
+      recognition.continuous = true;
+      recognition.interimResults = true;
+
+      fullText = '';
+      transcriptBox.textContent = '…';
+
+      recognition.onresult = (e) => {
+        let interim = '', final = '';
+        for (let i = 0; i < e.results.length; i++) {
+          if (e.results[i].isFinal) final += e.results[i][0].transcript;
+          else interim += e.results[i][0].transcript;
+        }
+        fullText = final;
+        transcriptBox.textContent = final + (interim ? ' ' + interim : '');
+      };
+
+      recognition.onerror = (e) => {
+        transcriptBox.textContent = 'Error: ' + e.error;
+        stopRecording();
+      };
+
+      recognition.start();
+      isRecording = true;
+      micBtn.classList.add('active');
+      micIcon.textContent = '⏹';
+      micLabel.textContent = 'STOP';
+      stopTimer = setTimeout(() => stopRecording(), 10000);
+
+    } else {
+      stopRecording();
+    }
+  }
+
+  function stopRecording() {
+    clearTimeout(stopTimer);
+    if (recognition) { recognition.stop(); recognition = null; }
+    isRecording = false;
+    micBtn.classList.remove('active');
+    micIcon.textContent = '🎙';
+    micLabel.textContent = 'RECORD';
+    if (!fullText) transcriptBox.textContent = '(δεν ακούστηκε τίποτα)';
+  }
 
   let recognition = null;
   let isRecording = false;
