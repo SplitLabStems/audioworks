@@ -1458,28 +1458,34 @@
   // Theatre fade progress (0=normal, 1=full theatre)
   let theatreFade = 0;
   let theatreTarget = 0;
+  // 12 seconds at 60fps = 720 frames. Per frame step = 1/720 ≈ 0.00139
+  const FADE_SPEED = 0.00139;
 
-  // Offscreen canvases
+  // Offscreen canvases — built once
   let offConsole = null, offStage = null;
   let consoleReady = false;
 
   function buildConsoleLayer(W, H) {
     offConsole = document.createElement('canvas');
     offConsole.width = W; offConsole.height = H;
-    const ctxC = offConsole.getContext('2d');
-    ctxC.filter = 'grayscale(100%) brightness(0.45) contrast(220%)';
-    ctxC.drawImage(bgImg, 0, 0, W, H);
-    ctxC.filter = 'none';
-    // Mask: bottom/console area only
-    ctxC.globalCompositeOperation = 'destination-in';
+    const c = offConsole.getContext('2d');
+    c.filter = 'grayscale(100%) brightness(0.5) contrast(200%)';
+    c.drawImage(bgImg, 0, 0, W, H);
+    c.filter = 'none';
+    c.globalCompositeOperation = 'destination-in';
     const cx = W * 0.42, cy = H * 0.75;
-    const cg = ctxC.createRadialGradient(cx, cy, W * 0.02, cx, cy, W * 0.42);
-    cg.addColorStop(0,   'rgba(0,0,0,1)');
-    cg.addColorStop(0.5, 'rgba(0,0,0,0.7)');
-    cg.addColorStop(1,   'rgba(0,0,0,0)');
-    ctxC.fillStyle = cg;
-    ctxC.fillRect(0, 0, W, H);
+    const g = c.createRadialGradient(cx, cy, W * 0.02, cx, cy, W * 0.40);
+    g.addColorStop(0,   'rgba(0,0,0,1)');
+    g.addColorStop(0.5, 'rgba(0,0,0,0.65)');
+    g.addColorStop(1,   'rgba(0,0,0,0)');
+    c.fillStyle = g;
+    c.fillRect(0, 0, W, H);
     consoleReady = true;
+  }
+
+  function buildStageCanvas(W, H) {
+    offStage = document.createElement('canvas');
+    offStage.width = W; offStage.height = H;
   }
 
   function drawBG(level) {
@@ -1487,51 +1493,52 @@
     bgCtx.clearRect(0, 0, W, H);
     if (!bgImg.complete || bgImg.naturalWidth === 0) return;
 
-    theatreFade += (theatreTarget - theatreFade) * 0.008;
+    // Linear fade — exactly 12s
+    if (theatreTarget > theatreFade)
+      theatreFade = Math.min(theatreFade + FADE_SPEED, 1);
+    else if (theatreTarget < theatreFade)
+      theatreFade = Math.max(theatreFade - FADE_SPEED, 0);
 
-    // ── BASE: dark contour ──
-    const baseBr = (0.5 - theatreFade * 0.44).toFixed(2);
+    // ── BASE: always dark contour ──
     bgCtx.save();
-    bgCtx.globalAlpha = 0.07 + theatreFade * 0.88;
-    bgCtx.filter = `grayscale(100%) contrast(180%) brightness(${baseBr})`;
+    bgCtx.globalAlpha = 0.07 + theatreFade * 0.90;
+    bgCtx.filter = `grayscale(100%) contrast(200%) brightness(${(0.5 - theatreFade * 0.46).toFixed(2)})`;
     bgCtx.drawImage(bgImg, 0, 0, W, H);
     bgCtx.restore();
 
-    if (theatreFade < 0.05) return;
+    if (theatreFade < 0.02) return;
 
-    // ── CONSOLE: drawn once, composited at fixed alpha ──
+    // ── CONSOLE: fixed, never changes after build ──
     if (consoleReady) {
       bgCtx.save();
-      bgCtx.globalAlpha = theatreFade * 0.6;
+      bgCtx.globalAlpha = 0.65; // FIXED — no theatreFade, no level
       bgCtx.drawImage(offConsole, 0, 0);
       bgCtx.restore();
     }
 
-    // ── STAGE LIGHTS: audio-reactive, top area only ──
-    if (!offStage || offStage.width !== W) {
-      offStage = document.createElement('canvas');
-      offStage.width = W; offStage.height = H;
+    // ── STAGE LIGHTS: reactive to audio, top half only ──
+    if (level > 0.005) {
+      if (!offStage || offStage.width !== W) buildStageCanvas(W, H);
+      const s = offStage.getContext('2d');
+      s.clearRect(0, 0, W, H);
+      s.filter = `grayscale(100%) brightness(${(0.2 + level * 2.5).toFixed(2)}) contrast(180%)`;
+      s.drawImage(bgImg, 0, 0, W, H);
+      s.filter = 'none';
+      s.globalCompositeOperation = 'destination-in';
+      const sg = s.createLinearGradient(0, 0, 0, H);
+      sg.addColorStop(0,    'rgba(0,0,0,1)');
+      sg.addColorStop(0.38, 'rgba(0,0,0,0.85)');
+      sg.addColorStop(0.55, 'rgba(0,0,0,0)');
+      sg.addColorStop(1,    'rgba(0,0,0,0)');
+      s.fillStyle = sg;
+      s.fillRect(0, 0, W, H);
+
+      bgCtx.save();
+      bgCtx.globalAlpha = Math.min(level * 2.0, 0.92);
+      bgCtx.globalCompositeOperation = 'screen';
+      bgCtx.drawImage(offStage, 0, 0);
+      bgCtx.restore();
     }
-    const ctxS = offStage.getContext('2d');
-    ctxS.clearRect(0, 0, W, H);
-    const lightBr = (0.15 + level * 2.2).toFixed(2);
-    ctxS.save();
-    ctxS.filter = `grayscale(100%) brightness(${lightBr}) contrast(200%)`;
-    ctxS.drawImage(bgImg, 0, 0, W, H);
-    ctxS.restore();
-    ctxS.globalCompositeOperation = 'destination-in';
-    const sg = ctxS.createLinearGradient(0, 0, 0, H);
-    sg.addColorStop(0,    'rgba(0,0,0,1)');
-    sg.addColorStop(0.42, 'rgba(0,0,0,0.8)');
-    sg.addColorStop(0.60, 'rgba(0,0,0,0)');
-    sg.addColorStop(1,    'rgba(0,0,0,0)');
-    ctxS.fillStyle = sg;
-    ctxS.fillRect(0, 0, W, H);
-    bgCtx.save();
-    bgCtx.globalAlpha = theatreFade * Math.min(level * 1.8, 0.9);
-    bgCtx.globalCompositeOperation = 'screen';
-    bgCtx.drawImage(offStage, 0, 0);
-    bgCtx.restore();
   }
 
   bgImg.onload = () => resizeBgCanvas();
