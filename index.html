@@ -1451,24 +1451,35 @@
 
   // ── ARIA mp3 ──
   let ariaInterval = null;
+  let ariaGainNode = null;
   let isSpeaking = false;
 
-  function startAria() {
+  function startAria(ctx) {
     if (ariaAudio) return;
     ariaAudio = new Audio('aria.mp3');
     ariaAudio.loop = true;
-    ariaAudio.volume = 0;
+    ariaAudio.crossOrigin = 'anonymous';
+
+    // Route through AudioContext so autoplay is guaranteed (same context as mic)
+    ariaGainNode = ctx.createGain();
+    ariaGainNode.gain.value = 0;
+    ariaGainNode.connect(ctx.destination);
+
+    const source = ctx.createMediaElementSource(ariaAudio);
+    source.connect(ariaGainNode);
+
     ariaAudio.play().catch(e => console.warn('Aria play():', e));
 
-    // Separate interval to smoothly control volume
+    // Interval to smoothly control gain
     ariaInterval = setInterval(() => {
-      if (!ariaAudio) return;
+      if (!ariaGainNode) return;
+      const current = ariaGainNode.gain.value;
       if (isSpeaking) {
-        if (ariaAudio.volume < 0.09)
-          ariaAudio.volume = Math.min(ariaAudio.volume + 0.005, 0.09);
+        if (current < 0.25)
+          ariaGainNode.gain.value = Math.min(current + 0.008, 0.25);
       } else {
-        if (ariaAudio.volume > 0)
-          ariaAudio.volume = Math.max(ariaAudio.volume - 0.003, 0);
+        if (current > 0)
+          ariaGainNode.gain.value = Math.max(current - 0.004, 0);
       }
     }, 80);
   }
@@ -1476,6 +1487,7 @@
   function stopAria() {
     clearInterval(ariaInterval); ariaInterval = null;
     isSpeaking = false;
+    ariaGainNode = null;
     if (!ariaAudio) return;
     const a = ariaAudio;
     ariaAudio = null;
@@ -1523,7 +1535,7 @@
         analyser.fftSize = 512;
         analyser.smoothingTimeConstant = 0.8;
         audioCtx.createMediaStreamSource(micStream).connect(analyser);
-        startAria();
+        startAria(audioCtx);
         micBtn.classList.add('active');
         micActive = true;
         animate();
