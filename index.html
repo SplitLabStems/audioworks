@@ -1447,66 +1447,11 @@
   window.addEventListener('resize', resizeBgCanvas);
   resizeBgCanvas();
 
-  // ── CRACKLE ──
-  function startCrackle(ctx) {
-    const bufSize = ctx.sampleRate * 4;
-    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < bufSize; i++)
-      data[i] = Math.random() < 0.00018 ? (Math.random() * 2 - 1) * 0.6 : 0;
-    const src = ctx.createBufferSource();
-    src.buffer = buf; src.loop = true;
-    crackleGain = ctx.createGain();
-    crackleGain.gain.value = 0.18;
-    src.connect(crackleGain);
-    crackleGain.connect(ctx.destination);
-    src.start();
-    crackleSource = src;
-  }
 
-  // ── SPARSE PIANO AMBIENCE ──
-  function startTheatreAmbience(ctx) {
-    theatreMaster = ctx.createGain();
-    theatreMaster.gain.value = 0;
-    theatreMaster.connect(ctx.destination);
-
-    // Reverb bus
-    const rev1 = ctx.createDelay(3.0); rev1.delayTime.value = 0.82;
-    const rev2 = ctx.createDelay(3.0); rev2.delayTime.value = 1.35;
-    const fb1  = ctx.createGain(); fb1.gain.value = 0.46;
-    const fb2  = ctx.createGain(); fb2.gain.value = 0.36;
-    const revLP = ctx.createBiquadFilter();
-    revLP.type = 'lowpass'; revLP.frequency.value = 900;
-    const revOut = ctx.createGain(); revOut.gain.value = 0.5;
-    theatreMaster.connect(rev1); theatreMaster.connect(rev2);
-    rev1.connect(fb1); fb1.connect(rev1);
-    rev2.connect(fb2); fb2.connect(rev2);
-    rev1.connect(revLP); rev2.connect(revLP);
-    revLP.connect(revOut); revOut.connect(ctx.destination);
-
-    // Sparse piano notes — very low octave
-    const notes = [110, 130.81, 146.83, 164.81, 196, 220, 174.61];
-    function scheduleNote() {
-      if (!audioCtx) return;
-      const freq = notes[Math.floor(Math.random() * notes.length)];
-      const osc  = ctx.createOscillator();
-      osc.type = 'sine'; osc.frequency.value = freq;
-      const env = ctx.createGain();
-      env.gain.setValueAtTime(0, ctx.currentTime);
-      env.gain.linearRampToValueAtTime(0.10, ctx.currentTime + 0.12);
-      env.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 5.0);
-      const lp = ctx.createBiquadFilter();
-      lp.type = 'lowpass'; lp.frequency.value = 500;
-      osc.connect(lp); lp.connect(env); env.connect(theatreMaster);
-      osc.start(); osc.stop(ctx.currentTime + 5.5);
-      setTimeout(scheduleNote, 5000 + Math.random() * 8000);
-    }
-    setTimeout(scheduleNote, 1500);
-    theatreMaster.gain.setTargetAtTime(0.5, ctx.currentTime, 3.0);
-  }
 
   // ── ARIA mp3 ──
   function startAria() {
+    if (ariaAudio) return;
     ariaAudio = new Audio('aria.mp3');
     ariaAudio.loop   = true;
     ariaAudio.volume = 0;
@@ -1516,27 +1461,26 @@
   function stopAria() {
     if (!ariaAudio) return;
     const a = ariaAudio;
+    ariaAudio = null;
     let v = a.volume;
     const fadeOut = setInterval(() => {
       v = Math.max(v - 0.005, 0);
       a.volume = v;
       if (v <= 0) { a.pause(); a.src = ''; clearInterval(fadeOut); }
     }, 50);
-    ariaAudio = null;
   }
 
   function fadeAriaIn() {
     if (!ariaAudio) return;
-    const target = 0.09;
-    if (ariaAudio.volume < target) {
-      ariaAudio.volume = Math.min(ariaAudio.volume + 0.004, target);
+    if (ariaAudio.volume < 0.09) {
+      ariaAudio.volume = Math.min(ariaAudio.volume + 0.008, 0.09);
     }
   }
 
   function fadeAriaOut() {
     if (!ariaAudio) return;
     if (ariaAudio.volume > 0) {
-      ariaAudio.volume = Math.max(ariaAudio.volume - 0.006, 0);
+      ariaAudio.volume = Math.max(ariaAudio.volume - 0.003, 0);
     }
   }
 
@@ -1593,8 +1537,6 @@
         analyser.fftSize = 512;
         analyser.smoothingTimeConstant = 0.8;
         audioCtx.createMediaStreamSource(micStream).connect(analyser);
-        startCrackle(audioCtx);
-        startTheatreAmbience(audioCtx);
         startAria();
         micBtn.classList.add('active');
         micActive = true;
