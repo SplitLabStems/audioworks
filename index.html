@@ -41,6 +41,55 @@
 
   /* mic widget stays visible always */
   #mic-widget { z-index: 999; }
+
+  #transcript-box {
+    position: fixed;
+    bottom: 5.5rem;
+    right: 2rem;
+    max-width: 320px;
+    min-width: 200px;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem 1.2rem;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--text);
+    backdrop-filter: blur(10px);
+    display: none;
+    white-space: pre-wrap;
+    word-break: break-word;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  }
+
+  #transcript-box.visible { display: block; }
+
+  #lang-toggle {
+    display: flex;
+    gap: 0.4rem;
+    justify-content: center;
+    margin-bottom: 0.4rem;
+  }
+
+  .lang-btn {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 0.25rem 0.6rem;
+    border: 1.5px solid var(--border);
+    border-radius: 3px;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.2s;
+  }
+
+  .lang-btn.active {
+    background: var(--text);
+    color: white;
+    border-color: var(--text);
+  }
   #bg-canvas-wrap {
     position: fixed;
     inset: 0;
@@ -845,16 +894,18 @@
 </div>
 
 <!-- ═══════════════════════════════════════════
-     MIC WIDGET (fixed corner, all pages)
+     TRANSCRIPTION WIDGET (fixed corner)
 ════════════════════════════════════════════ -->
 <div id="mic-widget">
-
-
-
-  <button id="mic-btn" title="Play / Stop" onclick="toggleMic()">
-    <span id="mic-icon">▶</span>
+  <div id="transcript-box"></div>
+  <div id="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('el-GR', this)">ΕΛ</button>
+    <button class="lang-btn" onclick="setLang('en-US', this)">EN</button>
+  </div>
+  <button id="mic-btn" title="Start / Stop" onclick="toggleMic()">
+    <span id="mic-icon">🎙</span>
   </button>
-  <div id="mic-label">PLAY</div>
+  <div id="mic-label">RECORD</div>
 </div>
 
 <!-- ═══════════════════════════════════════════
@@ -1413,184 +1464,86 @@
     e.target.reset();
   }
 
-  /* ─── PLAY BUTTON + AUDIO ─── */
-  let audioCtx  = null;
-  let analyser  = null;
-  let animFrame = null;
-  let isPlaying = false;
-  let vuSmooth  = 0;
-  let ariaAudio = null;
+  /* ─── TRANSCRIPTION ─── */
+  const micBtn       = document.getElementById('mic-btn');
+  const micIcon      = document.getElementById('mic-icon');
+  const micLabel     = document.getElementById('mic-label');
+  const transcriptBox= document.getElementById('transcript-box');
 
-  const micBtn  = document.getElementById('mic-btn');
-  const micIcon = document.getElementById('mic-icon');
-  const micLabel= document.getElementById('mic-label');
-  const bgCanvas= document.getElementById('bg-canvas');
-  const bgCtx   = bgCanvas.getContext('2d');
+  let recognition = null;
+  let isRecording = false;
+  let currentLang = 'el-GR';
+  let stopTimer   = null;
+  let fullText    = '';
 
-  // ── BACKGROUND IMAGE ──
-  const bgImg = new Image();
-  bgImg.src = 'PXL_20250426_162816225.jpg';
-
-  function resizeBgCanvas() {
-    bgCanvas.width  = window.innerWidth;
-    bgCanvas.height = window.innerHeight;
-    drawBG(0);
+  function setLang(lang, btn) {
+    currentLang = lang;
+    document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
   }
 
-  // Theatre fade progress (0=normal, 1=full theatre)
-  let theatreFade = 0;
-  let theatreTarget = 0;
-  // 15 seconds at 60fps = 900 frames. Per frame step = 1/900 ≈ 0.00111
-  const FADE_SPEED = 0.00111;
-
-  // Offscreen canvases — built once
-  let offConsole = null, offStage = null;
-  let consoleReady = false;
-
-  function buildConsoleLayer(W, H) {
-    offConsole = document.createElement('canvas');
-    offConsole.width = W; offConsole.height = H;
-    const c = offConsole.getContext('2d');
-    c.filter = 'grayscale(100%) brightness(0.5) contrast(200%)';
-    c.drawImage(bgImg, 0, 0, W, H);
-    c.filter = 'none';
-    c.globalCompositeOperation = 'destination-in';
-    const cx = W * 0.42, cy = H * 0.75;
-    const g = c.createRadialGradient(cx, cy, W * 0.02, cx, cy, W * 0.40);
-    g.addColorStop(0,   'rgba(0,0,0,1)');
-    g.addColorStop(0.5, 'rgba(0,0,0,0.65)');
-    g.addColorStop(1,   'rgba(0,0,0,0)');
-    c.fillStyle = g;
-    c.fillRect(0, 0, W, H);
-    consoleReady = true;
-  }
-
-  function buildStageCanvas(W, H) {
-    offStage = document.createElement('canvas');
-    offStage.width = W; offStage.height = H;
-  }
-
-  function drawBG(level) {
-    const W = bgCanvas.width, H = bgCanvas.height;
-    bgCtx.clearRect(0, 0, W, H);
-    if (!bgImg.complete || bgImg.naturalWidth === 0) return;
-
-    // Linear fade — exactly 15s
-    if (theatreTarget > theatreFade)
-      theatreFade = Math.min(theatreFade + FADE_SPEED, 1);
-    else if (theatreTarget < theatreFade)
-      theatreFade = Math.max(theatreFade - FADE_SPEED, 0);
-
-    // Nothing until fade begins
-    if (theatreFade < 0.01) return;
-
-    // ── BASE: dark blackout fades in ──
-    bgCtx.save();
-    bgCtx.globalAlpha = theatreFade * 0.95;
-    bgCtx.filter = 'grayscale(100%) contrast(200%) brightness(0.05)';
-    bgCtx.drawImage(bgImg, 0, 0, W, H);
-    bgCtx.restore();
-
-    // ── CONSOLE: fixed dim glow, fades in with theatreFade ──
-    if (consoleReady) {
-      bgCtx.save();
-      bgCtx.globalAlpha = theatreFade * 0.65;
-      bgCtx.drawImage(offConsole, 0, 0);
-      bgCtx.restore();
+  function toggleMic() {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      alert('Απαιτείται Google Chrome για transcription.');
+      return;
     }
 
-    // ── STAGE LIGHTS: steady bright glow, top area, fades in ──
-    if (!offStage || offStage.width !== W) buildStageCanvas(W, H);
-    const s = offStage.getContext('2d');
-    s.clearRect(0, 0, W, H);
-    s.filter = 'grayscale(100%) brightness(2.2) contrast(150%)';
-    s.drawImage(bgImg, 0, 0, W, H);
-    s.filter = 'none';
-    s.globalCompositeOperation = 'destination-in';
-    const sg = s.createLinearGradient(0, 0, 0, H);
-    sg.addColorStop(0,    'rgba(0,0,0,1)');
-    sg.addColorStop(0.38, 'rgba(0,0,0,0.85)');
-    sg.addColorStop(0.55, 'rgba(0,0,0,0)');
-    sg.addColorStop(1,    'rgba(0,0,0,0)');
-    s.fillStyle = sg;
-    s.fillRect(0, 0, W, H);
-    bgCtx.save();
-    bgCtx.globalAlpha = theatreFade * 0.88;
-    bgCtx.globalCompositeOperation = 'screen';
-    bgCtx.drawImage(offStage, 0, 0);
-    bgCtx.restore();
-  }
-
-  bgImg.onload = () => resizeBgCanvas();
-  window.addEventListener('resize', resizeBgCanvas);
-  resizeBgCanvas();
-
-  // ── ANIMATE: reads aria level → drives background ──
-  function animate() {
-    if (!analyser) return;
-    const buf = new Float32Array(analyser.frequencyBinCount);
-    analyser.getFloatTimeDomainData(buf);
-    let sum = 0;
-    for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
-    const rms = Math.sqrt(sum / buf.length);
-    const target = Math.min(rms * 120, 1);
-    // Fast up, slow down = punchy but no flicker
-    vuSmooth += (target - vuSmooth) * (target > vuSmooth ? 0.3 : 0.06);
-    drawBG(vuSmooth);
-    animFrame = requestAnimationFrame(animate);
-  }
-
-  // ── TOGGLE PLAY / STOP ──
-  function toggleMic() {
-    if (!isPlaying) {
+    if (!isRecording) {
       // START
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SR();
+      recognition.lang = currentLang;
+      recognition.continuous = true;
+      recognition.interimResults = true;
 
-      ariaAudio = new Audio('aria.mp3');
-      ariaAudio.loop = true;
-      ariaAudio.crossOrigin = 'anonymous';
+      fullText = '';
+      transcriptBox.textContent = '…';
+      transcriptBox.classList.add('visible');
 
-      const source = audioCtx.createMediaElementSource(ariaAudio);
+      recognition.onresult = (e) => {
+        let interim = '';
+        let final   = '';
+        for (let i = 0; i < e.results.length; i++) {
+          if (e.results[i].isFinal)
+            final += e.results[i][0].transcript;
+          else
+            interim += e.results[i][0].transcript;
+        }
+        fullText = final;
+        transcriptBox.textContent = final + (interim ? ' ' + interim : '');
+      };
 
-      analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 2048;
-      analyser.smoothingTimeConstant = 0.92;
+      recognition.onerror = (e) => {
+        transcriptBox.textContent = 'Error: ' + e.error;
+        stopRecording();
+      };
 
-      source.connect(analyser);
-      source.connect(audioCtx.destination);
+      recognition.start();
+      isRecording = true;
+      micBtn.classList.add('active');
+      micIcon.textContent = '⏹';
+      micLabel.textContent = 'STOP';
 
-      ariaAudio.play().then(() => {
-        isPlaying = true;
-        micBtn.classList.add('active');
-        micIcon.textContent = '■';
-        micLabel.textContent = 'STOP';
-        // Enter theatre mode — slow fade handled in drawBG
-        theatreTarget = 1;
-        consoleReady = false;
-        buildConsoleLayer(bgCanvas.width, bgCanvas.height);
-        document.body.classList.add('theatre-mode');
-        animate();
-      }).catch(e => console.error('Play failed:', e));
+      // Auto-stop after 10 seconds
+      stopTimer = setTimeout(() => stopRecording(), 10000);
 
     } else {
-      // STOP
-      cancelAnimationFrame(animFrame); animFrame = null;
-      ariaAudio.pause();
-      ariaAudio.src = '';
-      ariaAudio = null;
-      audioCtx.close(); audioCtx = null;
-      analyser = null;
-      isPlaying = false;
-      micBtn.classList.remove('active');
-      micIcon.textContent = '▶';
-      micLabel.textContent = 'PLAY';
-      // Exit theatre mode
-      theatreTarget = 0; theatreFade = 0; consoleReady = false;
-      document.body.classList.remove('theatre-mode');
-      vuSmooth = 0; drawBG(0);
+      stopRecording();
     }
   }
+
+  function stopRecording() {
+    clearTimeout(stopTimer);
+    if (recognition) { recognition.stop(); recognition = null; }
+    isRecording = false;
+    micBtn.classList.remove('active');
+    micIcon.textContent = '🎙';
+    micLabel.textContent = 'RECORD';
+    if (!fullText) transcriptBox.textContent = '(δεν ακούστηκε τίποτα)';
+  }
+
 </script>
 
 </body>
 </html>
+
