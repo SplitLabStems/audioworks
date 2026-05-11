@@ -1457,7 +1457,7 @@
     let sum = 0;
     for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
     const rms = Math.sqrt(sum / buf.length);
-    const target = Math.min(rms * 12, 1);
+    const target = Math.min(rms * 40, 1);
     vuSmooth += (target - vuSmooth) * 0.15;
     drawBG(vuSmooth);
     animFrame = requestAnimationFrame(animate);
