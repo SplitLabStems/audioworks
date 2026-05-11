@@ -839,10 +839,10 @@
 
 
 
-  <button id="mic-btn" title="Mic On/Off" onclick="toggleMic()">
-    <span id="mic-icon">🎙</span>
+  <button id="mic-btn" title="Play / Stop" onclick="toggleMic()">
+    <span id="mic-icon">▶</span>
   </button>
-  <div id="mic-label">MIC</div>
+  <div id="mic-label">PLAY</div>
 </div>
 
 <!-- ═══════════════════════════════════════════
@@ -1401,19 +1401,21 @@
     e.target.reset();
   }
 
-  /* ─── MIC + THEATRE AUDIO ─── */
-  let audioCtx = null, analyser = null, micStream = null;
-  let animFrame = null, micActive = false;
-  let vuSmooth = 0;
+  /* ─── PLAY BUTTON + AUDIO ─── */
+  let audioCtx  = null;
+  let analyser  = null;
+  let animFrame = null;
+  let isPlaying = false;
+  let vuSmooth  = 0;
   let ariaAudio = null;
-  let crackleSource = null, crackleGain = null;
-  let theatreMaster = null;
-  let silenceTimer = null, speechLevel = 0;
 
-  const micBtn   = document.getElementById('mic-btn');
-  const bgCanvas = document.getElementById('bg-canvas');
-  const bgCtx    = bgCanvas.getContext('2d');
+  const micBtn  = document.getElementById('mic-btn');
+  const micIcon = document.getElementById('mic-icon');
+  const micLabel= document.getElementById('mic-label');
+  const bgCanvas= document.getElementById('bg-canvas');
+  const bgCtx   = bgCanvas.getContext('2d');
 
+  // ── BACKGROUND IMAGE ──
   const bgImg = new Image();
   bgImg.src = 'PXL_20250426_162816225.jpg';
 
@@ -1447,111 +1449,59 @@
   window.addEventListener('resize', resizeBgCanvas);
   resizeBgCanvas();
 
-
-
-  // ── ARIA mp3 ──
-  let ariaInterval = null;
-  let ariaGainNode = null;
-  let isSpeaking = false;
-
-  function startAria(ctx) {
-    if (ariaAudio) return;
-    ariaAudio = new Audio('aria.mp3');
-    ariaAudio.loop = true;
-    ariaAudio.crossOrigin = 'anonymous';
-
-    // Route through AudioContext so autoplay is guaranteed (same context as mic)
-    ariaGainNode = ctx.createGain();
-    ariaGainNode.gain.value = 0;
-    ariaGainNode.connect(ctx.destination);
-
-    const source = ctx.createMediaElementSource(ariaAudio);
-    source.connect(ariaGainNode);
-
-    ariaAudio.play().catch(e => console.warn('Aria play():', e));
-
-    // Interval to smoothly control gain
-    ariaInterval = setInterval(() => {
-      if (!ariaGainNode) return;
-      const current = ariaGainNode.gain.value;
-      if (isSpeaking) {
-        if (current < 0.25)
-          ariaGainNode.gain.value = Math.min(current + 0.008, 0.25);
-      } else {
-        if (current > 0)
-          ariaGainNode.gain.value = Math.max(current - 0.004, 0);
-      }
-    }, 80);
-  }
-
-  function stopAria() {
-    clearInterval(ariaInterval); ariaInterval = null;
-    isSpeaking = false;
-    ariaGainNode = null;
-    if (!ariaAudio) return;
-    const a = ariaAudio;
-    ariaAudio = null;
-    a.pause(); a.src = '';
-  }
-
-  // ── SPEECH DETECTION ──
-  const SPEECH_THRESHOLD = 0.012;
-
-  // ── ANIMATE ──
+  // ── ANIMATE: reads aria level → drives background ──
   function animate() {
     if (!analyser) return;
-    const buf = analyser.frequencyBinCount;
-    const td  = new Float32Array(buf);
-    analyser.getFloatTimeDomainData(td);
+    const buf = new Float32Array(analyser.frequencyBinCount);
+    analyser.getFloatTimeDomainData(buf);
     let sum = 0;
-    for (let i = 0; i < buf; i++) sum += td[i] * td[i];
-    const rms = Math.sqrt(sum / buf);
-    const target = Math.min(rms * 9, 1);
-    vuSmooth += (target - vuSmooth) * 0.22;
-
-    if (rms > SPEECH_THRESHOLD) {
-      isSpeaking = true;
-      clearTimeout(silenceTimer); silenceTimer = null;
-    } else {
-      if (!silenceTimer) {
-        silenceTimer = setTimeout(() => {
-          isSpeaking = false;
-          speechLevel = 0;
-          silenceTimer = null;
-        }, 500);
-      }
-    }
-
+    for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+    const rms = Math.sqrt(sum / buf.length);
+    const target = Math.min(rms * 12, 1);
+    vuSmooth += (target - vuSmooth) * 0.15;
     drawBG(vuSmooth);
     animFrame = requestAnimationFrame(animate);
   }
 
-  async function toggleMic() {
-    if (!micActive) {
-      try {
-        micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        audioCtx  = new (window.AudioContext || window.webkitAudioContext)();
-        analyser  = audioCtx.createAnalyser();
-        analyser.fftSize = 512;
-        analyser.smoothingTimeConstant = 0.8;
-        audioCtx.createMediaStreamSource(micStream).connect(analyser);
-        startAria(audioCtx);
+  // ── TOGGLE PLAY / STOP ──
+  function toggleMic() {
+    if (!isPlaying) {
+      // START
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+      ariaAudio = new Audio('aria.mp3');
+      ariaAudio.loop = true;
+      ariaAudio.crossOrigin = 'anonymous';
+
+      const source = audioCtx.createMediaElementSource(ariaAudio);
+
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 2048;
+      analyser.smoothingTimeConstant = 0.85;
+
+      source.connect(analyser);
+      source.connect(audioCtx.destination);
+
+      ariaAudio.play().then(() => {
+        isPlaying = true;
         micBtn.classList.add('active');
-        micActive = true;
+        micIcon.textContent = '■';
+        micLabel.textContent = 'STOP';
         animate();
-      } catch(err) {
-        alert('Microphone access denied or unavailable.');
-      }
+      }).catch(e => console.error('Play failed:', e));
+
     } else {
+      // STOP
       cancelAnimationFrame(animFrame); animFrame = null;
-      clearTimeout(silenceTimer);
-      stopAria();
-      try { if (crackleSource) crackleSource.stop(); } catch(e) {}
-      if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
-      if (audioCtx)  { audioCtx.close(); audioCtx = null; }
-      analyser = null; micActive = false;
-      theatreMaster = null; crackleGain = null; crackleSource = null;
+      ariaAudio.pause();
+      ariaAudio.src = '';
+      ariaAudio = null;
+      audioCtx.close(); audioCtx = null;
+      analyser = null;
+      isPlaying = false;
       micBtn.classList.remove('active');
+      micIcon.textContent = '▶';
+      micLabel.textContent = 'PLAY';
       vuSmooth = 0; drawBG(0);
     }
   }
