@@ -28,7 +28,35 @@
     position: relative;
   }
 
-  /* ─── PHOTO BACKGROUND via canvas ─── */
+  /* ─── THEATRE MODE overlay ─── */
+  #theatre-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background: #000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1.2s ease;
+  }
+
+  body.theatre-mode #theatre-overlay {
+    opacity: 1;
+  }
+
+  /* nav and content fade out in theatre mode */
+  body.theatre-mode nav,
+  body.theatre-mode .page {
+    opacity: 0;
+    transition: opacity 1.2s ease;
+    pointer-events: none;
+  }
+
+  nav, .page {
+    transition: opacity 1.2s ease;
+  }
+
+  /* mic widget stays visible always */
+  #mic-widget { z-index: 999; }
   #bg-canvas-wrap {
     position: fixed;
     inset: 0;
@@ -825,6 +853,8 @@
 </head>
 <body>
 
+<div id="theatre-overlay"></div>
+
 <!-- ═══════════════════════════════════════════
      BACKGROUND CANVAS
 ════════════════════════════════════════════ -->
@@ -1429,20 +1459,36 @@
     const W = bgCanvas.width, H = bgCanvas.height;
     bgCtx.clearRect(0, 0, W, H);
     if (!bgImg.complete || bgImg.naturalWidth === 0) return;
+
+    if (!isPlaying) {
+      // Normal mode: very subtle
+      bgCtx.save();
+      bgCtx.globalAlpha = 0.07;
+      bgCtx.filter = 'grayscale(100%) contrast(160%) brightness(0.5)';
+      bgCtx.drawImage(bgImg, 0, 0, W, H);
+      bgCtx.restore();
+      return;
+    }
+
+    // Theatre mode: full colour, bright scene
+    // Base layer — always visible at good brightness
     bgCtx.save();
-    bgCtx.globalAlpha = 0.07;
-    bgCtx.filter = 'grayscale(100%) contrast(160%) brightness(0.5)';
+    bgCtx.globalAlpha = 0.75;
+    bgCtx.filter = 'grayscale(20%) contrast(120%) brightness(0.6)';
     bgCtx.drawImage(bgImg, 0, 0, W, H);
     bgCtx.restore();
-    if (level < 0.01) return;
-    const br    = Math.min(1.0 + level * 2.2, 3.0).toFixed(2);
-    const alpha = Math.min(level * 0.55, 0.52).toFixed(3);
-    bgCtx.save();
-    bgCtx.globalAlpha = parseFloat(alpha);
-    bgCtx.filter = `grayscale(100%) contrast(80%) brightness(${br})`;
-    bgCtx.globalCompositeOperation = 'screen';
-    bgCtx.drawImage(bgImg, 0, 0, W, H);
-    bgCtx.restore();
+
+    // Audio-reactive layer on top — smoothed, stable
+    if (level > 0.02) {
+      const br    = Math.min(0.6 + level * 1.8, 2.4).toFixed(2);
+      const alpha = Math.min(0.3 + level * 0.5, 0.75).toFixed(3);
+      bgCtx.save();
+      bgCtx.globalAlpha = parseFloat(alpha);
+      bgCtx.filter = `grayscale(10%) contrast(110%) brightness(${br})`;
+      bgCtx.globalCompositeOperation = 'screen';
+      bgCtx.drawImage(bgImg, 0, 0, W, H);
+      bgCtx.restore();
+    }
   }
 
   bgImg.onload = () => resizeBgCanvas();
@@ -1458,7 +1504,8 @@
     for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
     const rms = Math.sqrt(sum / buf.length);
     const target = Math.min(rms * 40, 1);
-    vuSmooth += (target - vuSmooth) * 0.15;
+    // Very slow smoothing = stable, no flicker
+    vuSmooth += (target - vuSmooth) * 0.04;
     drawBG(vuSmooth);
     animFrame = requestAnimationFrame(animate);
   }
@@ -1477,7 +1524,7 @@
 
       analyser = audioCtx.createAnalyser();
       analyser.fftSize = 2048;
-      analyser.smoothingTimeConstant = 0.85;
+      analyser.smoothingTimeConstant = 0.92;
 
       source.connect(analyser);
       source.connect(audioCtx.destination);
@@ -1487,6 +1534,8 @@
         micBtn.classList.add('active');
         micIcon.textContent = '■';
         micLabel.textContent = 'STOP';
+        // Enter theatre mode
+        document.body.classList.add('theatre-mode');
         animate();
       }).catch(e => console.error('Play failed:', e));
 
@@ -1502,6 +1551,8 @@
       micBtn.classList.remove('active');
       micIcon.textContent = '▶';
       micLabel.textContent = 'PLAY';
+      // Exit theatre mode
+      document.body.classList.remove('theatre-mode');
       vuSmooth = 0; drawBG(0);
     }
   }
