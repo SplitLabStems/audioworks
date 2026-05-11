@@ -1464,40 +1464,60 @@
     bgCtx.clearRect(0, 0, W, H);
     if (!bgImg.complete || bgImg.naturalWidth === 0) return;
 
-    // Smoothly move theatreFade toward theatreTarget (very slow = ~8s fade)
+    // Slow fade in/out
     theatreFade += (theatreTarget - theatreFade) * 0.008;
 
-    // ── LAYER 1: contour base (always visible, subtle in normal mode) ──
-    const baseAlpha = 0.07 + theatreFade * 0.88;
-    const baseBrightness = (0.5 - theatreFade * 0.44).toFixed(2);
+    // ── BASE: contour always visible (subtle in normal, dark in theatre) ──
+    const baseBr = (0.5 - theatreFade * 0.44).toFixed(2);
     bgCtx.save();
-    bgCtx.globalAlpha = baseAlpha;
-    bgCtx.filter = `grayscale(100%) contrast(180%) brightness(${baseBrightness})`;
+    bgCtx.globalAlpha = 0.07 + theatreFade * 0.88;
+    bgCtx.filter = `grayscale(100%) contrast(180%) brightness(${baseBr})`;
     bgCtx.drawImage(bgImg, 0, 0, W, H);
     bgCtx.restore();
 
     if (theatreFade < 0.05) return;
 
-    // ── LAYER 2: console spotlight (contour glow) ──
-    const spotBr = (0.4 + vuSmooth * 0.8).toFixed(2);
+    // ── CONSOLE: static, no animation — fixed dim glow at bottom ──
     bgCtx.save();
-    bgCtx.globalAlpha = theatreFade * Math.min(0.6 + vuSmooth * 0.3, 0.9);
-    bgCtx.filter = `grayscale(100%) brightness(${spotBr}) contrast(220%)`;
+    bgCtx.globalAlpha = theatreFade * 0.55;
+    bgCtx.filter = 'grayscale(100%) brightness(0.45) contrast(220%)';
     bgCtx.drawImage(bgImg, 0, 0, W, H);
     bgCtx.restore();
 
-    // ── LAYER 3: radial mask — console area only ──
+    // Mask console area only (bottom center)
     bgCtx.save();
     bgCtx.globalCompositeOperation = 'destination-in';
-    const gx = W * 0.42, gy = H * 0.72;
-    const grad = bgCtx.createRadialGradient(gx, gy, W * 0.04, gx, gy, W * 0.50);
-    grad.addColorStop(0,    `rgba(0,0,0,${theatreFade})`);
-    grad.addColorStop(0.4,  `rgba(0,0,0,${(theatreFade * 0.8).toFixed(2)})`);
-    grad.addColorStop(0.75, `rgba(0,0,0,${(theatreFade * 0.15).toFixed(2)})`);
-    grad.addColorStop(1,    'rgba(0,0,0,0)');
-    bgCtx.fillStyle = grad;
+    const cx = W * 0.42, cy = H * 0.75;
+    const consoleGrad = bgCtx.createRadialGradient(cx, cy, W * 0.02, cx, cy, W * 0.38);
+    consoleGrad.addColorStop(0,   `rgba(0,0,0,${theatreFade})`);
+    consoleGrad.addColorStop(0.5, `rgba(0,0,0,${(theatreFade * 0.7).toFixed(2)})`);
+    consoleGrad.addColorStop(1,   'rgba(0,0,0,0)');
+    bgCtx.fillStyle = consoleGrad;
     bgCtx.fillRect(0, 0, W, H);
     bgCtx.restore();
+
+    // ── STAGE LIGHTS: audio-reactive — top area only ──
+    if (level > 0.01) {
+      const lightBr = (0.3 + level * 1.4).toFixed(2);
+      bgCtx.save();
+      bgCtx.globalAlpha = theatreFade * Math.min(level * 1.2, 0.75);
+      bgCtx.filter = `grayscale(100%) brightness(${lightBr}) contrast(200%)`;
+      bgCtx.globalCompositeOperation = 'screen';
+      bgCtx.drawImage(bgImg, 0, 0, W, H);
+      bgCtx.restore();
+
+      // Mask: top portion only (stage/rigging area)
+      bgCtx.save();
+      bgCtx.globalCompositeOperation = 'destination-in';
+      const stageGrad = bgCtx.createLinearGradient(0, 0, 0, H);
+      stageGrad.addColorStop(0,    `rgba(0,0,0,${(theatreFade * 0.9).toFixed(2)})`);
+      stageGrad.addColorStop(0.45, `rgba(0,0,0,${(theatreFade * 0.6).toFixed(2)})`);
+      stageGrad.addColorStop(0.65, 'rgba(0,0,0,0)');
+      stageGrad.addColorStop(1,    'rgba(0,0,0,0)');
+      bgCtx.fillStyle = stageGrad;
+      bgCtx.fillRect(0, 0, W, H);
+      bgCtx.restore();
+    }
   }
 
   bgImg.onload = () => resizeBgCanvas();
